@@ -5,6 +5,6 @@ I made this since my light switch is quite far from my bed and it's always annoy
 
 # Images
 ## Panel
-![View of the panel in CAD from the front](/CAD/Panel-view.png)
-![View of the separated panel in CAD](/CAD/Panel-separated-view.png)
-![View of the separated panel as a render](/CAD/Panel-separated-render.png)
+![View of the panel in CAD from the front](/CAD/images/Panel-view.png)
+![View of the separated panel in CAD](/CAD/images/Panel-separated-view.png)
+![View of the separated panel as a render](/CAD/images/Panel-separated-render.png)

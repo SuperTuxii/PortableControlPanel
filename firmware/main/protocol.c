@@ -6,6 +6,7 @@
 #include "esp_lvgl_port.h"
 #include "display_driver.h"
 #include "lv_control_grid.h"
+#include "util.h"
 #include "protocol.h"
 
 #define DEBUG_READ      0
@@ -166,6 +167,7 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                 lvgl_port_unlock();
             }
             break;
+        default: goto undefinedCommandError;
         }
     } else if ((cmd >> 6) == 1) { // Only operands
         switch (cmd) {
@@ -187,9 +189,30 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                 lvgl_port_unlock();
             }
             break;
+        default: goto undefinedCommandError;
         }
     } else if ((cmd >> 6) == 2) { // Only data
-
+        switch (cmd) {
+        case 0x80:
+            if (dataLength == 3 && lvgl_port_lock(0)) {
+                lv_control_grid_set_outer_pad(convertInt32ToLittleEndian(data));
+                lvgl_port_unlock();
+            }
+            break;
+        case 0x81:
+            if (dataLength == 3 && lvgl_port_lock(0)) {
+                lv_control_grid_set_row_pad(convertInt32ToLittleEndian(data));
+                lvgl_port_unlock();
+            }
+            break;
+        case 0x82:
+            if (dataLength == 3 && lvgl_port_lock(0)) {
+                lv_control_grid_set_column_pad(convertInt32ToLittleEndian(data));
+                lvgl_port_unlock();
+            }
+            break;
+        default: goto undefinedCommandError;
+        }
     } else { // Operands and data
         switch (cmd) {
         case 0xC0:
@@ -243,6 +266,10 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                 lvgl_port_unlock();
             }
             break;
+        default: goto undefinedCommandError;
         }
     }
+    return;
+undefinedCommandError:
+    ESP_LOGE(COMMS_TAG, "Undefined Command: %02X", cmd);
 }

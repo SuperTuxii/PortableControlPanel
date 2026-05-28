@@ -1,6 +1,7 @@
 #include "lvgl.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "util.h"
 #include "lv_control_grid.h"
 
 #define BACKGROUND_COLOR    lv_color_hex(0x000000)
@@ -95,12 +96,12 @@ static void alignPivotForScaleForcedCB(lv_event_t *event) {
     }
 }
 
-static int32_t convertInt32ToLittleEndian(const uint8_t *data) {
-    return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
-}
-
-static uint16_t convertUInt16ToLittleEndian(const uint8_t *data) {
-    return data[0] << 8 | data[1];
+static void set_grid_size() {
+    lv_obj_t *screen = lv_screen_active();
+    const int cell_width = ((lv_obj_get_width(screen) - (2 * outerPad) + columnPad) / columnCount) - columnPad;
+    const int cell_height = ((lv_obj_get_height(screen) - (2 * outerPad) + rowPad) / rowCount) - rowPad;
+    const int cell_size = cell_height < cell_width ? cell_height : cell_width;
+    lv_obj_set_size(gridContainer, ((cell_size + columnPad) * columnCount) - columnPad + (2 * outerPad), ((cell_size + rowPad) * rowCount) - rowPad + (2 * outerPad));
 }
 
 void lv_control_grid() {
@@ -112,7 +113,6 @@ void lv_control_grid() {
 }
 
 void lv_control_grid_set_layout(int rows, int columns) {
-    lv_obj_t *screen = lv_screen_active();
     lv_control_grid_clear();
     if (rowDsc != NULL)
         free(rowDsc);
@@ -133,10 +133,7 @@ void lv_control_grid_set_layout(int rows, int columns) {
     columnDsc[columns] = LV_GRID_TEMPLATE_LAST;
     lv_obj_set_grid_dsc_array(gridContainer, columnDsc, rowDsc);
 
-    const int cell_width = ((lv_obj_get_width(screen) - (2 * outerPad) + columnPad) / columns) - columnPad;
-    const int cell_height = ((lv_obj_get_height(screen) - (2 * outerPad) + rowPad) / rows) - rowPad;
-    const int cell_size = cell_height < cell_width ? cell_height : cell_width;
-    lv_obj_set_size(gridContainer, ((cell_size + columnPad) * columns) - columnPad + (2 * outerPad), ((cell_size + rowPad) * rows) - rowPad + (2 * outerPad));
+    set_grid_size();
     lv_obj_center(gridContainer);
     lv_obj_set_style_bg_color(gridContainer, BACKGROUND_COLOR, LV_PART_MAIN);
     lv_obj_set_style_radius(gridContainer, 0, LV_PART_MAIN);
@@ -148,16 +145,19 @@ void lv_control_grid_set_layout(int rows, int columns) {
 
 void lv_control_grid_set_outer_pad(int32_t pad) {
     outerPad = pad;
+    set_grid_size();
     lv_obj_set_style_pad_all(gridContainer, outerPad, LV_PART_MAIN);
 }
 
 void lv_control_grid_set_row_pad(int32_t pad) {
     rowPad = pad;
+    set_grid_size();
     lv_obj_set_style_pad_row(gridContainer, rowPad, LV_PART_MAIN);
 }
 
 void lv_control_grid_set_column_pad(int32_t pad) {
     columnPad = pad;
+    set_grid_size();
     lv_obj_set_style_pad_column(gridContainer, columnPad, LV_PART_MAIN);
 }
 

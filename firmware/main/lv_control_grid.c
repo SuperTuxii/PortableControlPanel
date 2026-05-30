@@ -349,7 +349,7 @@ uint8_t *lv_control_grid_set_style(const uint8_t index, const uint8_t subIndex, 
     if (considerScale)
         data++;
     int styleDataSize = end - data;
-    if (*data <= 0x2F) {
+    if (*data <= 0x32) {
         if (styleDataSize < 4)
             goto styleFormatError;
         int32_t styleData = convertInt32ToLittleEndian(data + 1);
@@ -513,235 +513,293 @@ uint8_t *lv_control_grid_set_style(const uint8_t index, const uint8_t subIndex, 
         case 0x2F:
             lv_obj_set_style_transform_skew_y(object, styleData, *styleSelector);
             break;
+        case 0x30:
+            lv_obj_set_style_radius(object, styleData, *styleSelector);
+            break;
+        case 0x31:
+            lv_obj_set_style_radial_offset(object, styleData, *styleSelector);
+            break;
+        case 0x32:
+            lv_obj_set_style_rotary_sensitivity(object, styleData, *styleSelector);
+            break;
         default: ;
         }
         return data + 5;
     }
-    if (*data <= 0x38) {
+    if (*data <= 0x3C) {
         if (styleDataSize < 4)
             goto styleFormatError;
         uint32_t rawData = (uint32_t) convertInt32ToLittleEndian(data + 1);
         lv_color_t color = lv_color_hex(rawData >> 8);
         lv_opa_t opa = rawData & 0xFF;
         switch (*data) {
-        case 0x30:
+        case 0x33:
             lv_obj_set_style_bg_color(object, color, *styleSelector);
             lv_obj_set_style_bg_opa(object, opa, *styleSelector);
             break;
-        case 0x31:
+        case 0x34:
             lv_obj_set_style_bg_grad_color(object, color, *styleSelector);
             lv_obj_set_style_bg_main_opa(object, opa, *styleSelector);
             break;
-        case 0x32:
+        case 0x35:
             lv_obj_set_style_bg_image_recolor(object, color, *styleSelector);
             lv_obj_set_style_bg_image_recolor_opa(object, opa, *styleSelector);
             break;
-        case 0x33:
+        case 0x36:
             lv_obj_set_style_border_color(object, color, *styleSelector);
             lv_obj_set_style_border_opa(object, opa, *styleSelector);
             break;
-        case 0x34:
+        case 0x37:
             lv_obj_set_style_outline_color(object, color, *styleSelector);
             lv_obj_set_style_outline_opa(object, opa, *styleSelector);
             break;
-        case 0x35:
+        case 0x38:
             lv_obj_set_style_shadow_color(object, color, *styleSelector);
             lv_obj_set_style_shadow_opa(object, opa, *styleSelector);
             break;
-        case 0x36:
+        case 0x39:
             lv_obj_set_style_text_color(object, color, *styleSelector);
             lv_obj_set_style_text_opa(object, opa, *styleSelector);
             break;
-        case 0x37:
+        case 0x3A:
             lv_obj_set_style_text_outline_stroke_color(object, color, *styleSelector);
             lv_obj_set_style_text_outline_stroke_opa(object, opa, *styleSelector);
             break;
-        case 0x38:
+        case 0x3B:
             lv_obj_set_style_drop_shadow_color(object, color, *styleSelector);
             lv_obj_set_style_drop_shadow_opa(object, opa, *styleSelector);
+            break;
+        case 0x3C:
+            lv_obj_set_style_recolor(object, color, *styleSelector);
+            lv_obj_set_style_recolor_opa(object, opa, *styleSelector);
             break;
         default: ;
         }
         return data + 5;
     }
-    if (*data <= 0x3E) {
+    if (*data <= 0x45) {
         if (styleDataSize < 1)
             goto styleFormatError;
         uint8_t value = *(data + 1);
         switch (*data) {
-        case 0x39:
+        case 0x3D:
             lv_obj_set_style_bg_image_src(object, images + value, *styleSelector);
             break;
-        case 0x3A:
+        case 0x3E:
             lv_obj_set_style_bg_grad_opa(object, value, *styleSelector);
             break;
-        case 0x3B:
+        case 0x3F:
             lv_obj_set_style_bg_main_stop(object, value, *styleSelector);
             break;
-        case 0x3C:
+        case 0x40:
             lv_obj_set_style_bg_grad_stop(object, value, *styleSelector);
             break;
-        case 0x3D:
+        case 0x41:
             lv_obj_set_style_bg_image_opa(object, value, *styleSelector);
             break;
-        case 0x3E:
+        case 0x42:
             lv_obj_set_style_text_font(object, &lv_font_montserrat_48, *styleSelector);
             lv_obj_set_style_transform_scale(object, (value << 8) / 48, *styleSelector | LV_PART_ANY);
             lv_obj_remove_event_cb(object, alignPivotForScaleCB);
             lv_obj_add_event_cb(object, alignPivotForScaleCB, LV_EVENT_SIZE_CHANGED, NULL);
             alignPivotForScale(object, *styleSelector);
             break;
+        case 0x43:
+            lv_obj_set_style_opa(object, value, *styleSelector);
+            break;
+        case 0x44:
+            lv_obj_set_style_opa_layered(object, value, *styleSelector);
+            break;
+        case 0x45:
+            lv_obj_set_style_color_filter_opa(object, value, *styleSelector);
+            break;
         default: ;
         }
         return data + 2;
     }
     switch (*data) {
-    case 0x3F:
+    case 0x46:
         lv_obj_set_style_bg_grad_dir(object, LV_GRAD_DIR_NONE, *styleSelector);
         break;
-    case 0x40:
+    case 0x47:
         lv_obj_set_style_bg_grad_dir(object, LV_GRAD_DIR_VER, *styleSelector);
         break;
-    case 0x41:
+    case 0x48:
         lv_obj_set_style_bg_grad_dir(object, LV_GRAD_DIR_HOR, *styleSelector);
         break;
-    case 0x42:
+    case 0x49:
         lv_obj_set_style_bg_grad_dir(object, LV_GRAD_DIR_LINEAR, *styleSelector);
         break;
-    case 0x43:
+    case 0x4A:
         lv_obj_set_style_bg_grad_dir(object, LV_GRAD_DIR_RADIAL, *styleSelector);
         break;
-    case 0x44:
+    case 0x4B:
         lv_obj_set_style_bg_grad_dir(object, LV_GRAD_DIR_CONICAL, *styleSelector);
         break;
-    case 0x45:
+    case 0x4C:
         lv_obj_set_style_border_side(object, LV_BORDER_SIDE_NONE, *styleSelector);
         break;
-    case 0x46:
+    case 0x4D:
         lv_obj_set_style_border_side(object, lv_obj_get_style_border_side(object, *styleSelector) | LV_BORDER_SIDE_BOTTOM, *styleSelector);
         break;
-    case 0x47:
+    case 0x4E:
         lv_obj_set_style_border_side(object, lv_obj_get_style_border_side(object, *styleSelector) | LV_BORDER_SIDE_TOP, *styleSelector);
         break;
-    case 0x48:
+    case 0x4F:
         lv_obj_set_style_border_side(object, lv_obj_get_style_border_side(object, *styleSelector) | LV_BORDER_SIDE_LEFT, *styleSelector);
         break;
-    case 0x49:
+    case 0x50:
         lv_obj_set_style_border_side(object, lv_obj_get_style_border_side(object, *styleSelector) | LV_BORDER_SIDE_RIGHT, *styleSelector);
         break;
-    case 0x4A:
+    case 0x51:
         lv_obj_set_style_border_side(object, LV_BORDER_SIDE_FULL, *styleSelector);
         break;
-    case 0x4B:
+    case 0x52:
         lv_obj_set_style_text_decor(object, LV_TEXT_DECOR_NONE, *styleSelector);
         break;
-    case 0x4C:
+    case 0x53:
         lv_obj_set_style_text_decor(object, lv_obj_get_style_text_decor(object, *styleSelector) | LV_TEXT_DECOR_UNDERLINE, *styleSelector);
         break;
-    case 0x4D:
+    case 0x54:
         lv_obj_set_style_text_decor(object, lv_obj_get_style_text_decor(object, *styleSelector) | LV_TEXT_DECOR_STRIKETHROUGH, *styleSelector);
         break;
-    case 0x4E:
+    case 0x55:
         lv_obj_set_style_text_align(object, LV_TEXT_ALIGN_AUTO, *styleSelector);
         break;
-    case 0x4F:
+    case 0x56:
         lv_obj_set_style_text_align(object, LV_TEXT_ALIGN_LEFT, *styleSelector);
         break;
-    case 0x50:
+    case 0x57:
         lv_obj_set_style_text_align(object, LV_TEXT_ALIGN_CENTER, *styleSelector);
         break;
-    case 0x51:
+    case 0x58:
         lv_obj_set_style_text_align(object, LV_TEXT_ALIGN_RIGHT, *styleSelector);
         break;
-    case 0x52:
+    case 0x59:
         lv_obj_set_style_blur_backdrop(object, false, *styleSelector);
         break;
-    case 0x53:
+    case 0x5A:
         lv_obj_set_style_blur_backdrop(object, true, *styleSelector);
         break;
-    case 0x54:
+    case 0x5B:
         lv_obj_set_style_blur_quality(object, LV_BLUR_QUALITY_AUTO, *styleSelector);
         break;
-    case 0x55:
+    case 0x5C:
         lv_obj_set_style_blur_quality(object, LV_BLUR_QUALITY_SPEED, *styleSelector);
         break;
-    case 0x56:
+    case 0x5D:
         lv_obj_set_style_blur_quality(object, LV_BLUR_QUALITY_PRECISION, *styleSelector);
         break;
-    case 0x57:
+    case 0x5E:
         lv_obj_set_style_drop_shadow_quality(object, LV_BLUR_QUALITY_AUTO, *styleSelector);
         break;
-    case 0x58:
+    case 0x5F:
         lv_obj_set_style_drop_shadow_quality(object, LV_BLUR_QUALITY_SPEED, *styleSelector);
         break;
-    case 0x59:
+    case 0x60:
         lv_obj_set_style_drop_shadow_quality(object, LV_BLUR_QUALITY_PRECISION, *styleSelector);
         break;
-    case 0x5A:
+    case 0x61:
         lv_obj_set_style_align(object, LV_ALIGN_TOP_LEFT, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x5B:
+    case 0x62:
         lv_obj_set_style_align(object, LV_ALIGN_TOP_MID, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x5C:
+    case 0x63:
         lv_obj_set_style_align(object, LV_ALIGN_TOP_RIGHT, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x5D:
+    case 0x64:
         lv_obj_set_style_align(object, LV_ALIGN_LEFT_MID, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x5E:
+    case 0x65:
         lv_obj_set_style_align(object, LV_ALIGN_CENTER, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x5F:
+    case 0x66:
         lv_obj_set_style_align(object, LV_ALIGN_RIGHT_MID, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x60:
+    case 0x67:
         lv_obj_set_style_align(object, LV_ALIGN_BOTTOM_LEFT, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x61:
+    case 0x68:
         lv_obj_set_style_align(object, LV_ALIGN_BOTTOM_MID, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x62:
+    case 0x69:
         lv_obj_set_style_align(object, LV_ALIGN_BOTTOM_RIGHT, *styleSelector);
         alignPivotForScale(object, *styleSelector);
         break;
-    case 0x63:
+    case 0x6A:
         lv_obj_update_layout(object);
         alignPivotForScaleForced(object, *styleSelector);
         break;
-    case 0x64:
+    case 0x6B:
         lv_obj_update_layout(object);
         alignPivotForScaleForced(object, 0);
         for (uint32_t selector = 1; selector <= 0x0FFFFF; selector <<= 1) {
             alignPivotForScaleForced(object, selector);
         }
         break;
-    case 0x65:
+    case 0x6C:
         lv_obj_remove_event_cb(object, alignPivotForScaleForcedCB);
         lv_obj_add_event_cb(object, alignPivotForScaleForcedCB, LV_EVENT_SIZE_CHANGED, NULL);
         break;
-    case 0x66:
+    case 0x6D:
         lv_obj_remove_event_cb(object, alignPivotForScaleForcedCB);
         break;
-    case 0x67:
+    case 0x6E:
         lv_obj_set_style_text_font(object, &lv_font_montserrat_14, *styleSelector);
         break;
-    case 0x68:
+    case 0x6F:
         lv_obj_set_style_text_font(object, &lv_font_montserrat_48, *styleSelector);
         break;
-    case 0x69:
+    case 0x70:
         lv_obj_set_style_bg_image_tiled(object, false, *styleSelector);
         break;
-    case 0x6A:
+    case 0x71:
         lv_obj_set_style_bg_image_tiled(object, true, *styleSelector);
+        break;
+    case 0x72:
+        lv_obj_set_style_clip_corner(object, false, *styleSelector);
+        break;
+    case 0x73:
+        lv_obj_set_style_clip_corner(object, true, *styleSelector);
+        break;
+    case 0x74:
+        lv_obj_set_style_color_filter_dsc(object, NULL, *styleSelector);
+        break;
+    case 0x75:
+        lv_obj_set_style_color_filter_dsc(object, &lv_color_filter_shade, *styleSelector);
+        break;
+    case 0x76:
+        lv_obj_set_style_blend_mode(object, LV_BLEND_MODE_NORMAL, *styleSelector);
+        break;
+    case 0x77:
+        lv_obj_set_style_blend_mode(object, LV_BLEND_MODE_ADDITIVE, *styleSelector);
+        break;
+    case 0x78:
+        lv_obj_set_style_blend_mode(object, LV_BLEND_MODE_SUBTRACTIVE, *styleSelector);
+        break;
+    case 0x79:
+        lv_obj_set_style_blend_mode(object, LV_BLEND_MODE_MULTIPLY, *styleSelector);
+        break;
+    case 0x7A:
+        lv_obj_set_style_blend_mode(object, LV_BLEND_MODE_DIFFERENCE, *styleSelector);
+        break;
+    case 0x7B:
+        lv_obj_set_style_base_dir(object, LV_BASE_DIR_LTR, *styleSelector);
+        break;
+    case 0x7C:
+        lv_obj_set_style_base_dir(object, LV_BASE_DIR_RTL, *styleSelector);
+        break;
+    case 0x7D:
+        lv_obj_set_style_base_dir(object, LV_BASE_DIR_AUTO, *styleSelector);
         break;
     default: ;
     }

@@ -1,6 +1,6 @@
 #ifndef CONTROL_PANEL_FIRMWARE_PROTOCOL_H
 #define CONTROL_PANEL_FIRMWARE_PROTOCOL_H
-#include <stdint.h>
+#include <inttypes.h>
 
 #define TINYUSB_PROTOCOL_PORT       TINYUSB_CDC_ACM_0
 

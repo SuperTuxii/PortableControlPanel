@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(ControlPanelSoftware VERSION 0.1 LANGUAGES CXX)
+project(ControlPanelSoftware VERSION 0.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml")
+set(LVGL_DIR "${CMAKE_SOURCE_DIR}/lvgl_sim_qt/lvgl")
 
-find_package(Qt6 REQUIRED COMPONENTS Quick)
+find_package(Qt6 REQUIRED COMPONENTS Core Quick Widgets)
+
+add_subdirectory(lvgl_sim_qt)
+add_subdirectory(lvgl_sim)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -37,6 +43,8 @@ qt_add_qml_module(ControlPanelSoftwareApp
         ${source_files}
 )
 
+target_include_directories(ControlPanelSoftwareApp PRIVATE src/cpp)
+
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
@@ -49,7 +57,7 @@ set_target_properties(ControlPanelSoftwareApp PROPERTIES
 )
 
 target_link_libraries(ControlPanelSoftwareApp
-    PRIVATE Qt6::Quick
+    PRIVATE Qt6::Core Qt6::Quick Qt6::Widgets lvgl_simplugin
 )
 
 include(GNUInstallDirs)

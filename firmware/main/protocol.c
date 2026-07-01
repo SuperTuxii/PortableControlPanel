@@ -19,6 +19,7 @@ static uint8_t tuCmd;
 static uint8_t tuOperands[] = {0, 0};
 static uint8_t tuDataLength = 0;
 static uint8_t tuData[256];
+
 void tinyusbReadReady() {
     size_t rx_size = 0;
     esp_err_t ret;
@@ -130,7 +131,7 @@ void handleStyleData(uint8_t index, uint8_t subIndex, uint8_t* data, uint8_t dat
     lv_style_selector_t styleSelector = 0;
     uint8_t *end = data + dataLength;
     while (data <= end) {
-        data = lv_control_grid_set_style(index, subIndex, &styleSelector, data, end);
+        data = lv_control_grid_set_style(cg_act, index, subIndex, &styleSelector, data, end);
     }
 }
 
@@ -147,23 +148,23 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
 #endif
     if ((cmd >> 6) == 0) { // No operands or data
         switch (cmd) {
-        case 0x00:
+        case RestartCMD:
             fflush(stdout);
             display_backlight_off();
             esp_restart();
-        case 0x01:
+        case DeepSleepCMD:
             fflush(stdout);
             display_backlight_off();
             esp_deep_sleep_start();
-        case 0x02:
+        case TestFillCMD:
             if (lvgl_port_lock(0)) {
-                lv_control_grid_test_fill();
+                lv_control_grid_test_fill(cg_act);
                 lvgl_port_unlock();
             }
             break;
-        case 0x03:
+        case ClearCMD:
             if (lvgl_port_lock(0)) {
-                lv_control_grid_clear();
+                lv_control_grid_clear(cg_act);
                 lvgl_port_unlock();
             }
             break;
@@ -171,21 +172,33 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
         }
     } else if ((cmd >> 6) == 1) { // Only operands
         switch (cmd) {
-        case 0x40:
+        case SetLayoutCMD:
             if (lvgl_port_lock(0)) {
-                lv_control_grid_set_layout((operand1 + 1) / (operand2 + 1), operand2 + 1);
+                lv_control_grid_set_layout(cg_act, (operand1 + 1) / (operand2 + 1), operand2 + 1);
                 lvgl_port_unlock();
             }
             break;
-        case 0x41:
+        case MoveWidgetCMD:
             if (lvgl_port_lock(0)) {
-                lv_control_grid_remove(operand1);
+                lv_control_grid_move(cg_act, operand1, operand2);
                 lvgl_port_unlock();
             }
             break;
-        case 0x42:
+        case ChangeWidgetSizeCMD:
             if (lvgl_port_lock(0)) {
-                lv_control_grid_remove_image(operand1);
+                lv_control_grid_change_size(cg_act, operand1, operand2);
+                lvgl_port_unlock();
+            }
+            break;
+        case RemoveWidgetCMD:
+            if (lvgl_port_lock(0)) {
+                lv_control_grid_remove(cg_act, operand1, operand2);
+                lvgl_port_unlock();
+            }
+            break;
+        case RemoveImageCMD:
+            if (lvgl_port_lock(0)) {
+                lv_control_grid_remove_image(cg_act, operand1);
                 lvgl_port_unlock();
             }
             break;
@@ -193,21 +206,21 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
         }
     } else if ((cmd >> 6) == 2) { // Only data
         switch (cmd) {
-        case 0x80:
+        case SetOuterPadCMD:
             if (dataLength == 3 && lvgl_port_lock(0)) {
-                lv_control_grid_set_outer_pad(convertInt32ToLittleEndian(data));
+                lv_control_grid_set_outer_pad(cg_act, convertDataToInt32(data));
                 lvgl_port_unlock();
             }
             break;
-        case 0x81:
+        case SetRowPadCMD:
             if (dataLength == 3 && lvgl_port_lock(0)) {
-                lv_control_grid_set_row_pad(convertInt32ToLittleEndian(data));
+                lv_control_grid_set_row_pad(cg_act, convertDataToInt32(data));
                 lvgl_port_unlock();
             }
             break;
-        case 0x82:
+        case SetColumnPadCMD:
             if (dataLength == 3 && lvgl_port_lock(0)) {
-                lv_control_grid_set_column_pad(convertInt32ToLittleEndian(data));
+                lv_control_grid_set_column_pad(cg_act, convertDataToInt32(data));
                 lvgl_port_unlock();
             }
             break;
@@ -215,32 +228,32 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
         }
     } else { // Operands and data
         switch (cmd) {
-        case 0xC0:
+        case SetStyleDataCMD:
             if (lvgl_port_lock(0)) {
                 handleStyleData(operand1, operand2, data, dataLength);
                 lvgl_port_unlock();
             }
             break;
-        case 0xC1:
+        case AddImageCMD:
             if (lvgl_port_lock(0)) {
-                lv_control_grid_add_image(operand1, operand2, data, data + dataLength);
+                lv_control_grid_add_image(cg_act, operand1, operand2, data, data + dataLength);
                 lvgl_port_unlock();
             }
             break;
-        case 0xC2:
+        case ModifyImageCMD:
             if (lvgl_port_lock(0)) {
-                lv_control_grid_modify_image(operand1, data, data + dataLength);
+                lv_control_grid_modify_image(cg_act, operand1, data, data + dataLength);
                 lvgl_port_unlock();
             }
             break;
-        case 0xC3:
+        case CreateButtonCMD:
             if (lvgl_port_lock(0)) {
-                if (lv_control_grid_add_button(operand1, operand2) == ESP_OK)
+                if (lv_control_grid_add_button(cg_act, operand1, operand2) == ESP_OK)
                     handleStyleData(operand1, 0, data, dataLength);
                 lvgl_port_unlock();
             }
             break;
-        case 0xC4:
+        case SubTextCMD:
             if (lvgl_port_lock(0)) {
                 uint8_t *end = data + dataLength;
                 uint8_t *styleData = data;
@@ -251,16 +264,16 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                     return;
                 }
                 styleData++;
-                operand2 = lv_control_grid_text(operand1, operand2, data, end);
+                operand2 = lv_control_grid_text(cg_act, operand1, operand2, data, end);
                 if (operand2 != 0) {
                     handleStyleData(operand1, operand2, styleData, dataLength - (styleData - data));
                 }
                 lvgl_port_unlock();
             }
             break;
-        case 0xC5:
+        case SubImageCMD:
             if (lvgl_port_lock(0)) {
-                operand2 = lv_control_grid_image(operand1, operand2, data, data + dataLength);
+                operand2 = lv_control_grid_image(cg_act, operand1, operand2, data, data + dataLength);
                 if (operand2 != 0 && dataLength != 0)
                     handleStyleData(operand1, operand2, data + 1, dataLength - 1);
                 lvgl_port_unlock();

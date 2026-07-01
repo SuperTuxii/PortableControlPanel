@@ -76,7 +76,7 @@ static esp_err_t lvgl_init() {
     if (lvgl_port_lock(0)) {
         ESP_LOGI(LVGL_TAG, "Add LVGL widgets");
         lv_obj_set_style_bg_color(lv_screen_active(), lv_color_hex(0x000000), LV_PART_MAIN);
-        lv_control_grid();
+        lv_control_grid_create(lv_screen_active());
         lvgl_port_unlock();
     }
     return ESP_OK;

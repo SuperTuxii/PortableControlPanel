@@ -1,0 +1,279 @@
+import QtCore
+import QtQuick
+import QtQuick.Layouts
+
+Rectangle {
+    id: background
+    required property Settings settings
+    property bool fillPlaceholders: true
+    property string layoutName: "test"
+    property alias rows: layout.rows
+    property alias columns: layout.columns
+    property alias rowSpacing: layout.rowSpacing
+    property alias columnSpacing: layout.columnSpacing
+    property real outerPad: 20
+    readonly property real layoutHeight: rows * blockSize + (rows - 1) * layout.rowSpacing
+    readonly property real layoutWidth: columns * blockSize + (columns - 1) * layout.columnSpacing
+    readonly property alias blockSize: layout.blockSize
+
+    color: Theme.displayBackground
+    anchors.centerIn: parent
+
+
+    GridLayout {
+        id: layout
+
+        property real blockSize: Math.min(
+            Math.floor((background.width - (2 * background.outerPad) - (layout.columnSpacing * (layout.columns - 1))) / layout.columns),
+            Math.floor((background.height - (2 * background.outerPad) - (layout.rowSpacing * (layout.rows - 1))) / layout.rows)
+        )
+
+        rows: 3
+        columns: 5
+        rowSpacing: 5
+        columnSpacing: 5
+        anchors.centerIn: parent
+    }
+    Item {
+        id: dragArea
+
+        width: background.layoutWidth
+        height: background.layoutHeight
+        anchors.centerIn: parent
+    }
+
+    Component.onCompleted: {
+        fillLayout("blocks/PlaceholderBlock.qml", { opacity: fillPlaceholders ? Theme.placeholderBlockOpacity : 0 });
+        addBlock("blocks/ButtonBlock.qml", { "Layout.row": 0, "Layout.column": 0, "Layout.rowSpan": 1, "Layout.columnSpan": 1 });
+        loadLayout();
+    }
+
+    onLayoutNameChanged: loadLayout()
+
+    function loadLayout(): void {
+        fillLayout("blocks/PlaceholderBlock.qml", { opacity: fillPlaceholders ? Theme.placeholderBlockOpacity : 0 });
+        // if (layoutName)
+        settings.loadBlocks(layoutName, (data) => {
+            let styleData = {};
+            for (let styleSelector in data.style) {
+                styleData[styleSelector] = {};
+                for (const styleValue of data.style[styleSelector]) {
+                    if (styleValue.name.startsWith("Font")) {
+                        delete styleData[styleSelector][Connection.FontMontserrat14];
+                        delete styleData[styleSelector][Connection.FontMontserrat48];
+                        delete styleData[styleSelector][Connection.FontSizeScaled];
+                    }
+                    if (typeof styleValue.value === "string" && styleValue.value.startsWith("#") && styleValue.value.length > 7)
+                        styleData[styleSelector][styleValue.attrKey] = "#" + styleValue.value.slice(7, 9) + styleValue.value.slice(1, 7);
+                    else
+                        styleData[styleSelector][styleValue.attrKey] = styleValue.value;
+                }
+            }
+            addBlock("blocks/" + data["type"] + ".qml", {
+                "Layout.row": data.row,
+                "Layout.column": data.column,
+                "Layout.rowSpan": data.rowSpan,
+                "Layout.columnSpan": data.columnSpan,
+                style: styleData,
+            });
+        });
+    }
+
+    function fillLayout(componentPath: string, data): void {
+        clearLayout();
+        const component = Qt.createComponent(componentPath);
+        if (component.status === Component.Error) {
+            console.error(component.errorString());
+        } else if (component.status === Component.Ready) {
+            data.blockSize = Qt.binding(function() { return layout.blockSize; });
+            data.implicitHeight = layout.blockSize;
+            data.implicitWidth = layout.blockSize;
+            for (let i = 0; i < layout.rows * layout.columns; i++) {
+                data["Layout.column"] = i % layout.columns;
+                data["Layout.row"] = Math.floor(i / layout.columns);
+                component.createObject(layout, data);
+            }
+        } else {
+            console.error("component not ready yet");
+        }
+    }
+
+    function clearLayout(): void {
+        while (layout.children.length !== 0) {
+            layout.children[0].destroy();
+            layout.children[0].parent = null;
+        }
+    }
+
+    function findBlock(row: int, column: int): variant {
+        for (let i in layout.children) {
+            let child = layout.children[i];
+            if ((row - child.Layout.row) >= 0 && (row - child.Layout.row) < child.Layout.rowSpan &&
+                (column - child.Layout.column) >= 0 && (column - child.Layout.column) < child.Layout.columnSpan) {
+                return child;
+            }
+        }
+    }
+
+    function addBlock(componentPath: string, data): variant {
+        delete data.type;
+        let row = data["Layout.row"];
+        let column = data["Layout.column"];
+        let rowSpan = data["Layout.rowSpan"];
+        let columnSpan = data["Layout.columnSpan"];
+        for (let i = 0; i < rowSpan * columnSpan; i++) {
+            let block = findBlock(row + Math.floor(i / columnSpan), column + i % columnSpan);
+            if (block instanceof PlaceholderBlock) {
+                block.destroy();
+                block.parent = null;
+            } else if (block !== undefined) {
+                console.error("Failed to add block at " + row + ";" + column + " with " + rowSpan + ";" + columnSpan);
+                return null;
+            }
+        }
+        const component = Qt.createComponent(componentPath);
+        if (component.status === Component.Error) {
+            console.error(component.errorString());
+        } else if (component.status === Component.Ready) {
+            data.blockSize = Qt.binding(function() { return layout.blockSize; });
+            data.implicitHeight = layout.blockSize * rowSpan + layout.rowSpacing * (rowSpan - 1);
+            data.implicitWidth = layout.blockSize * columnSpan + layout.columnSpacing * (columnSpan - 1);
+            return component.createObject(layout, data);
+        } else {
+            console.error("component not ready yet");
+        }
+        return null;
+    }
+
+    function removeBlock(row: int, column: int): void {
+        let block = findBlock(row, column);
+        if (block === undefined && !(block instanceof PlaceholderBlock))
+            return;
+        block.destroy();
+        block.parent = null;
+        const component = Qt.createComponent("blocks/PlaceholderBlock.qml");
+        if (component.status === Component.Error) {
+            console.error(component.errorString());
+        } else if (component.status === Component.Ready) {
+            let data = {};
+            data.opacity = fillPlaceholders ? Theme.placeholderBlockOpacity : 0;
+            data.blockSize = Qt.binding(function() { return layout.blockSize; });
+            data.implicitHeight = layout.blockSize;
+            data.implicitWidth = layout.blockSize;
+            for (let i = 0; i < block.Layout.rowSpan * block.Layout.columnSpan; i++) {
+                data["Layout.column"] = block.Layout.column + (i % block.Layout.columnSpan);
+                data["Layout.row"] = block.Layout.row + Math.floor(i / block.Layout.columnSpan);
+                component.createObject(layout, data);
+            }
+        } else {
+            console.error("component not ready yet");
+        }
+    }
+
+    function startDrag(target): void {
+        if (dragArea.children.length > 0) {
+            console.error("Tried to start drag while another drag is active");
+            return;
+        }
+        target.parent = dragArea;
+        target.x = (target.Layout.column * target.blockSize) + (target.Layout.column * layout.columnSpacing);
+        target.y = (target.Layout.row * target.blockSize) + (target.Layout.row * layout.rowSpacing);
+        target.width = target.implicitWidth;
+        target.height = target.implicitHeight;
+        const component = Qt.createComponent("blocks/PlaceholderBlock.qml");
+        if (component.status === Component.Error) {
+            console.error(component.errorString());
+        } else if (component.status === Component.Ready) {
+            let data = {};
+            data.opacity = 0;
+            data.blockSize = Qt.binding(function() { return layout.blockSize; });
+            data.implicitHeight = Qt.binding(() => { return layout.blockSize * target.Layout.rowSpan + layout.rowSpacing * (target.Layout.rowSpan - 1); });
+            data.implicitWidth = Qt.binding(() => { return layout.blockSize * target.Layout.columnSpan + layout.columnSpacing * (target.Layout.columnSpan - 1); });
+            data["Layout.row"] = Qt.binding(() => { return target.Layout.row; });
+            data["Layout.column"] = Qt.binding(() => { return target.Layout.column; });
+            data["Layout.rowSpan"] = Qt.binding(() => { return target.Layout.rowSpan; });
+            data["Layout.columnSpan"] = Qt.binding(() => { return target.Layout.columnSpan; });
+            component.createObject(layout, data);
+        } else {
+            console.error("component not ready yet");
+        }
+    }
+
+    function getDragTarget(): variant {
+        return dragArea.children[0];
+    }
+
+    function applyDragTransforms(): void {
+        if (dragArea.children.length === 0) {
+            console.error("Tried applying a drag transforms while no drag was active");
+            return;
+        }
+        let target = dragArea.children[0];
+        let block = findBlock(target.Layout.row, target.Layout.column);
+        let row = Math.min(rows - 1, Math.max(0, Math.round((target.y / layoutHeight) * rows)));
+        let column = Math.min(columns - 1, Math.max(0, Math.round((target.x / layoutWidth) * columns)));
+        let rowSpan = Math.min(rows - row, Math.max(1, Math.round((target.height / layoutHeight) * rows)));
+        let columnSpan = Math.min(columns - column, Math.max(1, Math.round((target.width / layoutWidth) * columns)));
+
+        for (let i = 0; i < rowSpan * columnSpan; i++) {
+            let block = findBlock(row + Math.floor(i / columnSpan), column + i % columnSpan);
+            if (block !== undefined && !(block instanceof PlaceholderBlock)) {
+                return;
+            }
+        }
+        block.parent = null;
+        const component = Qt.createComponent("blocks/PlaceholderBlock.qml");
+        if (component.status === Component.Error) {
+            console.error(component.errorString());
+        } else if (component.status === Component.Ready) {
+            let data = {};
+            data.opacity = fillPlaceholders ? Theme.placeholderBlockOpacity : 0;
+            data.blockSize = Qt.binding(function() { return layout.blockSize; });
+            data.implicitHeight = layout.blockSize;
+            data.implicitWidth = layout.blockSize;
+            for (let i = 0; i < block.Layout.rowSpan * block.Layout.columnSpan; i++) {
+                data["Layout.column"] = block.Layout.column + (i % block.Layout.columnSpan);
+                data["Layout.row"] = block.Layout.row + Math.floor(i / block.Layout.columnSpan);
+                component.createObject(layout, data);
+            }
+        } else {
+            console.error("component not ready yet");
+        }
+        for (let i = 0; i < rowSpan * columnSpan; i++) {
+            let block = findBlock(row + Math.floor(i / columnSpan), column + i % columnSpan);
+            if (block !== undefined) {
+                block.destroy();
+                block.parent = null;
+            }
+        }
+        target.Layout.row = row;
+        target.Layout.column = column;
+        target.Layout.rowSpan = rowSpan;
+        target.Layout.columnSpan = columnSpan;
+        block.parent = layout;
+    }
+
+    function endDrag(row, column): void {
+        if (dragArea.children.length === 0) {
+            console.error("Tried ending a drag while none was active");
+            return;
+        }
+        let target = dragArea.children[0];
+        let block = findBlock(target.Layout.row, target.Layout.column);
+        block.destroy();
+        block.parent = null;
+        delete target.x;
+        delete target.y;
+        delete target.width;
+        delete target.height;
+        target.implicitHeight = layout.blockSize * target.Layout.rowSpan + layout.rowSpacing * (target.Layout.rowSpan - 1);
+        target.implicitWidth = layout.blockSize * target.Layout.columnSpan + layout.columnSpacing * (target.Layout.columnSpan - 1);
+        target.parent = layout;
+        settings.editBlock(layoutName, row, column, {
+            row: target.Layout.row,
+            column: target.Layout.column,
+            rowSpan: target.Layout.rowSpan,
+            columnSpan: target.Layout.columnSpan,
+        });
+    }
+}

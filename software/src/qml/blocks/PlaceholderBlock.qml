@@ -1,8 +1,8 @@
 import QtQuick
 
 Rectangle {
-    readonly property list<var> actionTypes: []
     property real blockSize
+    property var style: {}
 
     color: Theme.placeholderBlockColor
     radius: Theme.placeholderBlockRadius

@@ -9,8 +9,8 @@ set(LVGL_DIR "${CMAKE_SOURCE_DIR}/lvgl_sim_qt/lvgl")
 
 find_package(Qt6 REQUIRED COMPONENTS Core Quick Widgets)
 
-add_subdirectory(lvgl_sim_qt)
 add_subdirectory(lvgl_sim)
+add_subdirectory(${CMAKE_SOURCE_DIR}/../firmware/main lv_control_grid_lib)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -22,14 +22,21 @@ file(GLOB qml_files
         RELATIVE ${PROJECT_SOURCE_DIR}
         "src/qml/*.qml"
 )
-file(GLOB block_files
+file(GLOB menu_values
         RELATIVE ${PROJECT_SOURCE_DIR}
-        "src/qml/blocks/*.qml"
+        "src/qml/menuValues/*.qml"
 )
 file(GLOB source_files
         RELATIVE ${PROJECT_SOURCE_DIR}
         "src/cpp/*.h"
         "src/cpp/*.cpp"
+)
+
+qt_add_resources(ControlPanelSoftwareApp "fonts"
+    PREFIX "/"
+    FILES
+        "fonts/MaterialSymbolsRounded.ttf"
+        "fonts/Montserrat.ttf"
 )
 
 set_source_files_properties(src/qml/Theme.qml
@@ -38,7 +45,7 @@ set_source_files_properties(src/qml/Theme.qml
 qt_add_qml_module(ControlPanelSoftwareApp
     URI ControlPanelSoftware
     QML_FILES
-        ${qml_files} ${block_files}
+        ${qml_files} ${menu_values}
     SOURCES
         ${source_files}
 )
@@ -57,7 +64,7 @@ set_target_properties(ControlPanelSoftwareApp PROPERTIES
 )
 
 target_link_libraries(ControlPanelSoftwareApp
-    PRIVATE Qt6::Core Qt6::Quick Qt6::Widgets lvgl_simplugin
+    PRIVATE Qt6::Core Qt6::Quick Qt6::Widgets lvgl_simplugin lv_control_grid_lib
 )
 
 include(GNUInstallDirs)

@@ -116,9 +116,9 @@ static void freeUserDataOnDelete(lv_event_t *event) {
 static void addUserData(lv_obj_t *object, lv_user_data_type_t type, void *data) {
     lv_user_data_t *list = lv_obj_get_user_data(object);
     if (list == NULL) {
-        lv_obj_set_user_data(object, malloc(sizeof(lv_user_data_t)));
+        list = malloc(sizeof(lv_user_data_t));
+        lv_obj_set_user_data(object, list);
         lv_obj_add_event_cb(object, freeUserDataOnDelete, LV_EVENT_DELETE, NULL);
-        list = lv_obj_get_user_data(object);
         list->head = NULL;
         list->tail = NULL;
     }
@@ -134,22 +134,44 @@ static void addUserData(lv_obj_t *object, lv_user_data_type_t type, void *data) 
     list->tail = node;
 }
 
-static lv_grad_dsc_t *getBgGradDsc(lv_obj_t *object, lv_style_selector_t styleSelector) {
-    auto gradDsc = (lv_grad_dsc_t *) lv_obj_get_style_bg_grad(object, styleSelector);
-    if (gradDsc != NULL)
-        return gradDsc;
-    gradDsc = malloc(sizeof(lv_grad_dsc_t));
-    memset(gradDsc, 0, sizeof(lv_grad_dsc_t));
-    gradDsc->stops[0].color = lv_obj_get_style_bg_color(object, styleSelector);
-    gradDsc->stops[0].opa = lv_obj_get_style_bg_main_opa(object, styleSelector);
-    gradDsc->stops[0].frac = lv_obj_get_style_bg_main_stop(object, styleSelector);
-    gradDsc->stops[1].color = lv_obj_get_style_bg_grad_color(object, styleSelector);
-    gradDsc->stops[1].opa = lv_obj_get_style_bg_grad_opa(object, styleSelector);
-    gradDsc->stops[1].frac = lv_obj_get_style_bg_grad_stop(object, styleSelector);
-    gradDsc->stops_count = LV_GRADIENT_MAX_STOPS;
-    gradDsc->dir = lv_obj_get_style_bg_grad_dir(object, styleSelector);
-    gradDsc->params.radial.end_extent.x = INT32_MIN;
-    addUserData(object, LV_USER_DATA_TYPE_GRAD_DSC, gradDsc);
+static lv_grad_dsc_t *getBgGradDsc(lv_obj_t *object, lv_style_selector_t styleSelector, bool createIfNotFound) {
+    lv_grad_dsc_t *gradDsc = NULL;
+    const lv_user_data_t *userData = lv_obj_get_user_data(object);
+    if (userData != NULL) {
+        lv_user_data_node_t *node = userData->head;
+        while (node != NULL) {
+            if (node->type == LV_USER_DATA_TYPE_GRAD_DSC) {
+                lv_user_data_grad_dsc_t *gradDscData = node->data;
+                if (styleSelector == gradDscData->selector)
+                    return &gradDscData->grad_dsc;
+                if (createIfNotFound && gradDsc == NULL && ((styleSelector & gradDscData->selector) != 0 ||
+                    ((gradDscData->selector & 0xFFFF) == 0 && (styleSelector & 0xFF0000) == (gradDscData->selector & 0xFF0000))))
+                    gradDsc = &gradDscData->grad_dsc;
+            }
+            node = node->next;
+        }
+    }
+    if (!createIfNotFound)
+        return NULL;
+    lv_user_data_grad_dsc_t *gradDscData = malloc(sizeof(lv_user_data_grad_dsc_t));
+    gradDscData->selector = styleSelector;
+    if (gradDsc != NULL) {
+        memcpy(&gradDscData->grad_dsc, gradDsc, sizeof(lv_grad_dsc_t));
+        gradDsc = &gradDscData->grad_dsc;
+    } else {
+        gradDsc = &gradDscData->grad_dsc;
+        memset(gradDsc, 0, sizeof(lv_grad_dsc_t));
+        gradDsc->stops[0].color = lv_obj_get_style_bg_color(object, styleSelector);
+        gradDsc->stops[0].opa = lv_obj_get_style_bg_main_opa(object, styleSelector);
+        gradDsc->stops[0].frac = lv_obj_get_style_bg_main_stop(object, styleSelector);
+        gradDsc->stops[1].color = lv_obj_get_style_bg_grad_color(object, styleSelector);
+        gradDsc->stops[1].opa = lv_obj_get_style_bg_grad_opa(object, styleSelector);
+        gradDsc->stops[1].frac = lv_obj_get_style_bg_grad_stop(object, styleSelector);
+        gradDsc->stops_count = LV_GRADIENT_MAX_STOPS;
+        gradDsc->dir = lv_obj_get_style_bg_grad_dir(object, styleSelector);
+        gradDsc->params.radial.end_extent.x = INT32_MIN;
+    }
+    addUserData(object, LV_USER_DATA_TYPE_GRAD_DSC, gradDscData);
     lv_obj_set_style_bg_grad(object, gradDsc, styleSelector);
     return gradDsc;
 }
@@ -472,7 +494,7 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
             goto styleFormatError;
     }
 
-    auto gradDsc = (lv_grad_dsc_t *) lv_obj_get_style_bg_grad(object, *styleSelector);
+    lv_grad_dsc_t *gradDsc = NULL;
     bool considerScale = (*data == ConsiderScale);
     if (considerScale)
         data++;
@@ -651,61 +673,47 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
             lv_obj_set_style_rotary_sensitivity(object, styleData, *styleSelector);
             break;
         case BackgroundGradParams1:
-            if (gradDsc != NULL) {
-                if (gradDsc->params.radial.focal_extent.x >= gradDsc->params.radial.focal.x)
-                    gradDsc->params.radial.focal_extent.x = styleData + (gradDsc->params.radial.focal_extent.x - gradDsc->params.radial.focal.x);
-                gradDsc->params.radial.focal.x = styleData;
-            } else {
-                getBgGradDsc(object, *styleSelector)->params.linear.start.x = styleData;
-            }
+            gradDsc = getBgGradDsc(object, *styleSelector, true);
+            if (gradDsc->params.radial.focal_extent.x >= gradDsc->params.radial.focal.x)
+                gradDsc->params.radial.focal_extent.x = styleData + (gradDsc->params.radial.focal_extent.x - gradDsc->params.radial.focal.x);
+            gradDsc->params.linear.start.x = styleData;
             break;
         case BackgroundGradParams2:
-            if (gradDsc != NULL) {
-                if (gradDsc->params.radial.focal_extent.x >= gradDsc->params.radial.focal.x)
-                    gradDsc->params.radial.focal_extent.y = styleData;
-                gradDsc->params.radial.focal.y = styleData;
-            } else {
-                getBgGradDsc(object, *styleSelector)->params.linear.start.y = styleData;
-            }
+            gradDsc = getBgGradDsc(object, *styleSelector, true);
+            if (gradDsc->params.radial.focal_extent.x >= gradDsc->params.radial.focal.x)
+                gradDsc->params.radial.focal_extent.y = styleData;
+            gradDsc->params.linear.start.y = styleData;
             break;
         case BackgroundGradLinearEndX:
-            getBgGradDsc(object, *styleSelector)->params.linear.end.x = styleData;
+            getBgGradDsc(object, *styleSelector, true)->params.linear.end.x = styleData;
             break;
         case BackgroundGradLinearEndY:
-            getBgGradDsc(object, *styleSelector)->params.linear.end.y = styleData;
+            getBgGradDsc(object, *styleSelector, true)->params.linear.end.y = styleData;
             break;
         case BackgroundGradRadialEndX:
-            if (gradDsc != NULL) {
-                if (gradDsc->params.radial.end_extent.x > gradDsc->params.radial.end.x)
-                    gradDsc->params.radial.end_extent.x = styleData + (gradDsc->params.radial.end_extent.x - gradDsc->params.radial.end.x);
-                gradDsc->params.radial.end.x = styleData;
-            } else {
-                getBgGradDsc(object, *styleSelector)->params.radial.end.x = styleData;
-            }
+            gradDsc = getBgGradDsc(object, *styleSelector, true);
+            if (gradDsc->params.radial.end_extent.x > gradDsc->params.radial.end.x)
+                gradDsc->params.radial.end_extent.x = styleData + (gradDsc->params.radial.end_extent.x - gradDsc->params.radial.end.x);
+            gradDsc->params.radial.end.x = styleData;
             break;
         case BackgroundGradRadialEndY:
-            if (gradDsc != NULL) {
-                if (gradDsc->params.radial.end_extent.x > gradDsc->params.radial.end.x)
-                    gradDsc->params.radial.end_extent.y = styleData;
-                gradDsc->params.radial.end.y = styleData;
-            } else {
-                getBgGradDsc(object, *styleSelector)->params.radial.end.y = styleData;
-            }
+            gradDsc = getBgGradDsc(object, *styleSelector, true);
+            if (gradDsc->params.radial.end_extent.x > gradDsc->params.radial.end.x)
+                gradDsc->params.radial.end_extent.y = styleData;
+            gradDsc->params.radial.end.y = styleData;
             break;
         case BackgroundGradRadialFocalRadius:
-            if (gradDsc == NULL)
-                gradDsc = getBgGradDsc(object, *styleSelector);
+            gradDsc = getBgGradDsc(object, *styleSelector, true);
             styleData = abs(styleData);
-            if ((styleData == abs(gradDsc->params.radial.end_extent.x - gradDsc->params.radial.end.x)
+            if (styleData == abs(gradDsc->params.radial.end_extent.x - gradDsc->params.radial.end.x)
                 && gradDsc->params.radial.focal.x == gradDsc->params.radial.end.x
-                && gradDsc->params.radial.focal.y == gradDsc->params.radial.end.y))
+                && gradDsc->params.radial.focal.y == gradDsc->params.radial.end.y)
                 styleData++;
             gradDsc->params.radial.focal_extent.x = gradDsc->params.radial.focal.x + styleData;
             gradDsc->params.radial.focal_extent.y = gradDsc->params.radial.focal.y;
             break;
         case BackgroundGradRadialEndRadius:
-            if (gradDsc == NULL)
-                gradDsc = getBgGradDsc(object, *styleSelector);
+            gradDsc = getBgGradDsc(object, *styleSelector, true);
             styleData = abs(styleData);
             if (styleData == 0 || (styleData == abs(gradDsc->params.radial.focal_extent.x - gradDsc->params.radial.focal.x)
                 && gradDsc->params.radial.focal.x == gradDsc->params.radial.end.x
@@ -728,12 +736,14 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
         case BackgroundColor:
             lv_obj_set_style_bg_color(object, color, *styleSelector);
             lv_obj_set_style_bg_opa(object, opa, *styleSelector);
+            gradDsc = getBgGradDsc(object, *styleSelector, false);
             if (gradDsc != NULL)
                 gradDsc->stops[0].color = color;
             break;
         case BackgroundGradColor:
             lv_obj_set_style_bg_grad_color(object, color, *styleSelector);
             lv_obj_set_style_bg_grad_opa(object, opa, *styleSelector);
+            gradDsc = getBgGradDsc(object, *styleSelector, false);
             if (gradDsc != NULL) {
                 gradDsc->stops[1].color = color;
                 gradDsc->stops[1].opa = opa;
@@ -785,10 +795,10 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
         int16_t value = (int16_t) convertDataToUInt16(data + 1);
         switch (*data) {
         case BackgroundGradConicalStartAngle:
-            getBgGradDsc(object, *styleSelector)->params.conical.start_angle = value;
+            getBgGradDsc(object, *styleSelector, true)->params.conical.start_angle = value;
             break;
         case BackgroundGradConicalEndAngle:
-            getBgGradDsc(object, *styleSelector)->params.conical.end_angle = value;
+            getBgGradDsc(object, *styleSelector, true)->params.conical.end_angle = value;
             break;
         default: ;
         }
@@ -804,16 +814,19 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
             break;
         case BackgroundMainOpacity:
             lv_obj_set_style_bg_main_opa(object, value, *styleSelector);
+            gradDsc = getBgGradDsc(object, *styleSelector, false);
             if (gradDsc != NULL)
                 gradDsc->stops[0].opa = value;
             break;
         case BackgroundMainStop:
             lv_obj_set_style_bg_main_stop(object, value, *styleSelector);
+            gradDsc = getBgGradDsc(object, *styleSelector, false);
             if (gradDsc != NULL)
                 gradDsc->stops[0].frac = value;
             break;
         case BackgroundGradStop:
             lv_obj_set_style_bg_grad_stop(object, value, *styleSelector);
+            gradDsc = getBgGradDsc(object, *styleSelector, false);
             if (gradDsc != NULL)
                 gradDsc->stops[1].frac = value;
             break;
@@ -846,13 +859,13 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
     // Non Type Keys
     if (*data >= BackgroundGradDirNone && *data <= BackgroundGradDirConical) {
         lv_obj_set_style_bg_grad_dir(object, *data - BackgroundGradDirNone, *styleSelector);
-        if (*data >= BackgroundGradDirLinear) gradDsc = getBgGradDsc(object, *styleSelector);
+        if (*data >= BackgroundGradDirLinear) gradDsc = getBgGradDsc(object, *styleSelector, true);
         if (gradDsc != NULL)
             gradDsc->dir = *data - BackgroundGradDirNone;
         goto nonTypeSwitchEnd;
     }
     if (*data >= BackgroundGradExtendPad && *data <= BackgroundGradExtendReflect) {
-        getBgGradDsc(object, *styleSelector)->extend = *data - BackgroundGradExtendPad;
+        getBgGradDsc(object, *styleSelector, true)->extend = *data - BackgroundGradExtendPad;
         goto nonTypeSwitchEnd;
     }
     if (*data >= TextAlignAuto && *data <= TextAlignRight) {

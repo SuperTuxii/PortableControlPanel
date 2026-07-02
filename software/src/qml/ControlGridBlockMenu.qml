@@ -187,11 +187,17 @@ Popup {
                                     if (!styleValueLayout.dirty || !popup.visible) return;
                                     demoControlGrid.remove(0, 0);
                                     demoControlGrid.addWidget(typeMenuValue.value, 0, 0);
-                                    demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
+                                    let styleSet = false;
                                     for (const styleSelector in menuValueLayout.styleData) {
-                                        if (parseInt(styleSelector) === menuValueLayout.styleSelector) continue;
-                                        demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
+                                        if (parseInt(styleSelector) === menuValueLayout.styleSelector) {
+                                            demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
+                                            styleSet = true;
+                                        } else {
+                                            demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
+                                        }
                                     }
+                                    if (!styleSet)
+                                        demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
                                     styleValueLayout.dirty = false;
                                 });
                                 return data;

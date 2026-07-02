@@ -25,6 +25,11 @@ typedef enum {
     LV_USER_DATA_TYPE_GRAD_DSC,
 } lv_user_data_type_t;
 
+typedef struct grad_dsc_data {
+    lv_style_selector_t selector;
+    lv_grad_dsc_t grad_dsc;
+} lv_user_data_grad_dsc_t;
+
 typedef struct node {
     void *data;
     struct node *next;

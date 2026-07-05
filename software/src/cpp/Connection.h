@@ -3,6 +3,7 @@
 #include <qmetaobject.h>
 #include <QObject>
 #include <QJSValue>
+#include <QSerialPort>
 #include <qqmlintegration.h>
 #include <lvgl.h>
 #include "protocol_macros.h"
@@ -16,17 +17,15 @@ class Connection : public QObject {
     QML_ELEMENT
     Q_PROPERTY(bool connected READ isConnected NOTIFY connectedChanged)
 
-    QString serialPort = "/dev/ttyACM0";
-    int serialFileDescriptor = -1;
+    bool serialConnected = false;
+    QSerialPort serialPort;
     QQmlEngine *engine;
 public:
     explicit Connection(QQmlEngine *engine, QObject *parent = nullptr);
     ~Connection() override;
     static Connection *create(QQmlEngine *qmlEngine, QJSEngine *);
 
-    [[nodiscard]] bool isConnected() const {
-        return serialFileDescriptor >= 0;
-    }
+    [[nodiscard]] bool isConnected() const;
 
     PROTOCOL_COMMANDS_ENUM
     PROTOCOL_STYLE_KEYS_ENUM
@@ -50,19 +49,25 @@ public:
 public slots:
     void tryConnect();
     void connectSerial();
+    void setBacklightBrightness(int brightness);
     void setLayout(int rows, int columns);
     void setOuterPad(int32_t pad);
     void setRowPad(int32_t pad);
     void setColumnPad(int32_t pad);
-    void testFill() const;
-    void clear() const;
-    void move(uint8_t fromIndex, uint8_t toIndex) const;
-    void changeSize(uint8_t index, uint8_t index2) const;
-    void remove(uint8_t index, uint8_t subIndex) const;
-    void addWidget(const QString& type, uint8_t index, uint8_t index2, const QJSValue& data) const;
-    void setStyle(uint8_t index, uint8_t subIndex, const QJSValue& data) const;
+    void testFill();
+    void clear();
+    void move(uint8_t fromIndex, uint8_t toIndex);
+    void changeSize(uint8_t index, uint8_t index2);
+    void remove(uint8_t index, uint8_t subIndex);
+    void addWidget(const QString& type, uint8_t index, uint8_t index2, const QJSValue& data);
+    void setStyle(uint8_t index, uint8_t subIndex, const QJSValue& data);
+
+    void serialReadReady();
+    void serialErrorOccurred(QSerialPort::SerialPortError error);
+    void serialAboutToClose();
 signals:
     void connectedChanged();
+    void connectionError(QString error);
 };
 
 #endif //CONTROLPANELSOFTWARE_CONNECTION_H

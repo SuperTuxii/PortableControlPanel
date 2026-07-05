@@ -22,8 +22,8 @@ ControlGrid {
 
     function loadLayout(): void {
         Connection.tryConnect();
-        setLayout(layoutData.rows, layoutData.columns);
-        Connection.setLayout(layoutData.rows, layoutData.columns);
+        setLayout(rows, columns);
+        Connection.setLayout(rows, columns);
         settings.loadBlocks(layoutName, (block) => {
             let index = (block.row * columns) + block.column;
             let index2 = index + (block.columnSpan-1) + ((block.rowSpan-1) * columns);

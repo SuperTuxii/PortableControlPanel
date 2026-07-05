@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/qml")
 set(LVGL_DIR "${CMAKE_SOURCE_DIR}/lvgl_sim_qt/lvgl")
 
-find_package(Qt6 REQUIRED COMPONENTS Core Quick Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Quick Widgets SerialPort)
 
 add_subdirectory(lvgl_sim)
 add_subdirectory(${CMAKE_SOURCE_DIR}/../firmware/main lv_control_grid_lib)
@@ -31,12 +31,25 @@ file(GLOB source_files
         "src/cpp/*.h"
         "src/cpp/*.cpp"
 )
+set(toastify_files
+        "toastify/Toastify.qml"
+        "toastify/ToastifyDelegate.qml"
+)
+file(GLOB toastify_resources
+        RELATIVE ${PROJECT_SOURCE_DIR}
+        "toastify/resources/*.svg"
+)
 
 qt_add_resources(ControlPanelSoftwareApp "fonts"
     PREFIX "/"
     FILES
         "fonts/MaterialSymbolsRounded.ttf"
         "fonts/Montserrat.ttf"
+)
+qt_add_resources(ControlPanelSoftwareApp "toastify-icons"
+    PREFIX "/"
+    BASE "toastify"
+    FILES ${toastify_resources}
 )
 
 set_source_files_properties(src/qml/Theme.qml
@@ -45,7 +58,7 @@ set_source_files_properties(src/qml/Theme.qml
 qt_add_qml_module(ControlPanelSoftwareApp
     URI ControlPanelSoftware
     QML_FILES
-        ${qml_files} ${menu_values}
+        ${qml_files} ${menu_values} ${toastify_files}
     SOURCES
         ${source_files}
 )
@@ -64,7 +77,7 @@ set_target_properties(ControlPanelSoftwareApp PROPERTIES
 )
 
 target_link_libraries(ControlPanelSoftwareApp
-    PRIVATE Qt6::Core Qt6::Quick Qt6::Widgets lvgl_simplugin lv_control_grid_lib
+    PRIVATE Qt6::Core Qt6::Quick Qt6::Widgets Qt6::SerialPort lvgl_simplugin lv_control_grid_lib
 )
 
 include(GNUInstallDirs)

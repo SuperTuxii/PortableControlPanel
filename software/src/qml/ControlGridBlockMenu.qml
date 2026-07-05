@@ -54,8 +54,8 @@ Popup {
                 LvglDisplay {
                     id: demoDisplayPanel
                     name: "DemoDisplay"
-                    displayWidth: 130
-                    displayHeight: 130
+                    implicitWidth: 225
+                    implicitHeight: 125
                     anchors.centerIn: parent
                     Component.onDestruction: demoControlGrid.lvglRenderer = null
                 }
@@ -64,7 +64,6 @@ Popup {
                     id: demoControlGrid
                     Component.onCompleted: {
                         demoDisplayPanel.transferRenderer(demoControlGrid);
-                        outerPad = 15;
                         setLayout(1, 1);
                     }
                 }
@@ -183,23 +182,7 @@ Popup {
                                         data.push({ attrKey: parseInt(child.attrKey), name: child.propName, value: child.value });
                                 }
                                 dirty = true;
-                                Qt.callLater(() => {
-                                    if (!styleValueLayout.dirty || !popup.visible) return;
-                                    demoControlGrid.remove(0, 0);
-                                    demoControlGrid.addWidget(typeMenuValue.value, 0, 0);
-                                    let styleSet = false;
-                                    for (const styleSelector in menuValueLayout.styleData) {
-                                        if (parseInt(styleSelector) === menuValueLayout.styleSelector) {
-                                            demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
-                                            styleSet = true;
-                                        } else {
-                                            demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
-                                        }
-                                    }
-                                    if (!styleSet)
-                                        demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
-                                    styleValueLayout.dirty = false;
-                                });
+                                Qt.callLater(popup.updateDemoDisplayLive);
                                 return data;
                             }
                             property bool dirty: false
@@ -357,6 +340,10 @@ Popup {
                 min: 1
                 max: popup.rows - rowMenuValue.value
                 Layout.maximumHeight: 30
+                onValueChanged: {
+                    configureDemoDisplayCrop(rowSpanMenuValue.value, columnSpanMenuValue.value);
+                    updateDemoDisplayLive(true);
+                }
             }
             IntMenuValue {
                 id: columnSpanMenuValue
@@ -365,6 +352,10 @@ Popup {
                 min: 1
                 max: popup.columns - columnMenuValue.value
                 Layout.maximumHeight: 30
+                onValueChanged: {
+                    configureDemoDisplayCrop(rowSpanMenuValue.value, columnSpanMenuValue.value);
+                    updateDemoDisplayLive(true);
+                }
             }
             Item {
                 Layout.fillWidth: true
@@ -459,21 +450,57 @@ Popup {
             typeMenuValue.value = popup.blockTypes[0];
         stateComboBox.currentIndex = 0;
         partComboBox.currentIndex = 0;
+        demoControlGrid.setLayout(rows, columns);
+        demoControlGrid.outerPad = controlGrid.outerPad;
+        demoControlGrid.rowPad = controlGrid.rowPad;
+        demoControlGrid.columnPad = controlGrid.columnPad;
         clearStyleValues();
         loadBlock(blockData);
-        loadDemoDisplay();
+        configureDemoDisplayCrop(blockData.rowSpan, blockData.columnSpan);
+        loadDemoDisplay(blockData.rowSpan, blockData.columnSpan);
     }
 
-    onClosed: {
-        demoControlGrid.remove(0, 0);
+    onClosed: demoControlGrid.clear()
+
+    function configureDemoDisplayCrop(rowSpan: int, columnSpan: int): void {
+        demoDisplayPanel.imageClipRect = Qt.rect(
+            ((demoDisplayPanel.displayWidth - controlGrid.controlGridWidth) / 2) - controlGrid.columnPad,
+            ((demoDisplayPanel.displayHeight - controlGrid.controlGridHeight) / 2) - controlGrid.rowPad,
+            (((controlGrid.controlGridWidth + controlGrid.columnPad) / columns) * columnSpan) + controlGrid.columnPad,
+            (((controlGrid.controlGridHeight + controlGrid.rowPad) / rows) * rowSpan) + controlGrid.rowPad
+        );
+        if (demoDisplayPanel.imageClipRect.width / demoDisplayPanel.imageClipRect.height * 125 <= 225) {
+            demoDisplayPanel.implicitWidth = demoDisplayPanel.imageClipRect.width / demoDisplayPanel.imageClipRect.height * 125;
+            demoDisplayPanel.implicitHeight = 125;
+        } else {
+            demoDisplayPanel.implicitWidth = 225;
+            demoDisplayPanel.implicitHeight = demoDisplayPanel.imageClipRect.height / demoDisplayPanel.imageClipRect.width * 225;
+        }
     }
 
-    function loadDemoDisplay(): void {
+    function loadDemoDisplay(rowSpan: int, columnSpan: int): void {
         demoControlGrid.remove(0, 0);
-        demoControlGrid.addWidget(typeMenuValue.value, 0, 0);
+        demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpan-1) * columns) + (columnSpan-1));
         for (const styleSelector in menuValueLayout.styleData) {
             demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
         }
+    }
+    function updateDemoDisplayLive(force): void {
+        if ((!styleValueLayout.dirty && !force) || !popup.visible) return;
+        demoControlGrid.remove(0, 0);
+        demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpanMenuValue.value-1) * columns) + (columnSpanMenuValue.value-1));
+        let styleSet = false;
+        for (const styleSelector in menuValueLayout.styleData) {
+            if (parseInt(styleSelector) === menuValueLayout.styleSelector) {
+                demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
+                styleSet = true;
+            } else {
+                demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
+            }
+        }
+        if (!styleSet)
+            demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
+        styleValueLayout.dirty = false;
     }
     function loadBlock(data): void {
         if (!newBlock) {

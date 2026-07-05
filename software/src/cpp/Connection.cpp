@@ -1,26 +1,30 @@
-#include <fcntl.h>
-#include <termios.h>
-#include <unistd.h>
-#include <QtLogging>
 #include <QJSValueIterator>
+#include <QFile>
 #include "Connection.h"
 #include "ControlGrid.h"
 
-#define CHECK_CONNECTION(value)    if (!isConnected()) return value;
+#define CHECK_CONNECTION(value)     if (!isConnected()) return value
+#define WRITE_SERIAL(size)          serialPort.write(reinterpret_cast<const char*>(writeBuffer), size)
 
 static uint8_t writeBuffer[260];
 
 Connection::Connection(QQmlEngine* engine, QObject* parent) : QObject(parent) {
     this->engine = engine;
+    connect(&serialPort, &QSerialPort::readyRead, this, &Connection::serialReadReady);
+    connect(&serialPort, &QSerialPort::aboutToClose, this, &Connection::serialAboutToClose);
+    connect(&serialPort, &QSerialPort::errorOccurred, this, &Connection::serialErrorOccurred);
 }
 
 Connection::~Connection() {
-    if (serialFileDescriptor >= 0)
-        close(serialFileDescriptor);
+    serialPort.close();
 }
 
 Connection* Connection::create(QQmlEngine* qmlEngine, QJSEngine*) {
     return new Connection(qmlEngine);
+}
+
+bool Connection::isConnected() const {
+    return serialConnected;
 }
 
 void Connection::tryConnect() {
@@ -31,124 +35,116 @@ void Connection::connectSerial() {
     if (isConnected())
         return;
 
-    serialFileDescriptor = open(serialPort.toStdString().c_str(), O_RDWR | O_NOCTTY | O_SYNC);
-    if (serialFileDescriptor < 0) {
-        qWarning("Failed to connect via Serial Port %s (open): %s", serialPort.toStdString().c_str(), strerror(errno));
-        return;
+    for (int i = 0; i < 10; ++i) {
+        if (QString port = "/dev/ttyACM" + QString::number(i); QFile::exists(port)) {
+            serialPort.setPortName(port);
+            break;
+        }
     }
-    termios tty = {};
-    if (tcgetattr(serialFileDescriptor, &tty) != 0) {
-        qWarning("Failed to connect via Serial Port %s (tcgetattr): %s", serialPort.toStdString().c_str(), strerror(errno));
-        close(serialFileDescriptor);
-        serialFileDescriptor = -1;
-        return;
+    serialPort.setBaudRate(QSerialPort::Baud115200);
+    serialPort.setDataBits(QSerialPort::Data8);
+    serialPort.setParity(QSerialPort::NoParity);
+    serialPort.setStopBits(QSerialPort::OneStop);
+    serialPort.setFlowControl(QSerialPort::NoFlowControl);
+
+    if (serialPort.open(QIODevice::ReadWrite)) {
+        serialConnected = true;
+        clear();
+        emit connectedChanged();
+    } else {
+        qWarning() << "Serial Connection Error:" << serialPort.errorString();
+        emit connectionError("Serial Connection Failed");
     }
-    cfsetospeed(&tty, B115200);
-    cfsetispeed(&tty, B115200);
+}
 
-    tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
-    tty.c_iflag &= ~IGNBRK;
-    tty.c_lflag = 0;
-    tty.c_oflag = 0;
-    tty.c_cc[VMIN] = 0;
-    tty.c_cc[VTIME] = 5;
-    tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-    tty.c_cflag |= (CLOCAL | CREAD);
-    tty.c_cflag &= ~(PARENB | PARODD);
-    tty.c_cflag &= ~CSTOPB;
-    tty.c_cflag &= ~CRTSCTS;
-
-    if (tcsetattr(serialFileDescriptor, TCSANOW, &tty) != 0) {
-        qWarning("Failed to connect via Serial Port %s (tcsetattr): %s", serialPort.toStdString().c_str(), strerror(errno));
-        close(serialFileDescriptor);
-        serialFileDescriptor = -1;
-        return;
-    }
-
-    clear();
-    emit connectedChanged();
+void Connection::setBacklightBrightness(int brightness) {
+    CHECK_CONNECTION();
+    writeBuffer[0] = SetBacklightBrightnessCMD;
+    writeBuffer[1] = (brightness >> 8) & 0xFF;
+    writeBuffer[2] = brightness & 0xFF;
+    WRITE_SERIAL(3);
 }
 
 void Connection::setLayout(int rows, int columns) {
-    CHECK_CONNECTION()
+    CHECK_CONNECTION();
     if (rows * columns > 256 || rows * columns <= 0 || columns <= 0) return;
     writeBuffer[0] = SetLayoutCMD;
     writeBuffer[1] = (rows * columns) - 1;
     writeBuffer[2] = columns - 1;
-    write(serialFileDescriptor, writeBuffer, 3);
+    WRITE_SERIAL(3);
 }
 
 void Connection::setOuterPad(int32_t pad) {
-    CHECK_CONNECTION()
+    CHECK_CONNECTION();
     writeBuffer[0] = SetOuterPadCMD;
     writeBuffer[1] = 3;
     writeBuffer[2] = pad >> 24;
     writeBuffer[3] = (pad >> 16) & 0xFF;
     writeBuffer[4] = (pad >> 8) & 0xFF;
     writeBuffer[5] = pad & 0xFF;
-    write(serialFileDescriptor, writeBuffer, 6);
+    WRITE_SERIAL(6);
 }
 
 void Connection::setRowPad(int32_t pad) {
-    CHECK_CONNECTION()
+    CHECK_CONNECTION();
     writeBuffer[0] = SetRowPadCMD;
     writeBuffer[1] = 3;
     writeBuffer[2] = pad >> 24;
     writeBuffer[3] = (pad >> 16) & 0xFF;
     writeBuffer[4] = (pad >> 8) & 0xFF;
     writeBuffer[5] = pad & 0xFF;
-    write(serialFileDescriptor, writeBuffer, 6);
+    WRITE_SERIAL(6);
 }
 
 void Connection::setColumnPad(int32_t pad) {
-    CHECK_CONNECTION()
+    CHECK_CONNECTION();
     writeBuffer[0] = SetColumnPadCMD;
     writeBuffer[1] = 3;
     writeBuffer[2] = pad >> 24;
     writeBuffer[3] = (pad >> 16) & 0xFF;
     writeBuffer[4] = (pad >> 8) & 0xFF;
     writeBuffer[5] = pad & 0xFF;
-    write(serialFileDescriptor, writeBuffer, 6);
+    WRITE_SERIAL(6);
 }
 
-void Connection::testFill() const {
-    CHECK_CONNECTION()
+void Connection::testFill() {
+    CHECK_CONNECTION();
     writeBuffer[0] = TestFillCMD;
-    write(serialFileDescriptor, writeBuffer, 1);
+    WRITE_SERIAL(1);
 }
 
-void Connection::clear() const {
-    CHECK_CONNECTION()
+void Connection::clear() {
+    CHECK_CONNECTION();
     writeBuffer[0] = ClearCMD;
-    write(serialFileDescriptor, writeBuffer, 1);
+    WRITE_SERIAL(1);
 }
 
-void Connection::move(uint8_t fromIndex, uint8_t toIndex) const {
-    CHECK_CONNECTION()
+void Connection::move(uint8_t fromIndex, uint8_t toIndex) {
+    CHECK_CONNECTION();
     writeBuffer[0] = MoveWidgetCMD;
     writeBuffer[1] = fromIndex;
     writeBuffer[2] = toIndex;
-    write(serialFileDescriptor, writeBuffer, 3);
+    WRITE_SERIAL(3);
 }
 
-void Connection::changeSize(uint8_t index, uint8_t index2) const {
-    CHECK_CONNECTION()
+void Connection::changeSize(uint8_t index, uint8_t index2) {
+    CHECK_CONNECTION();
     writeBuffer[0] = ChangeWidgetSizeCMD;
     writeBuffer[1] = index;
     writeBuffer[2] = index2;
-    write(serialFileDescriptor, writeBuffer, 3);
+    WRITE_SERIAL(3);
 }
 
-void Connection::remove(uint8_t index, uint8_t subIndex) const {
-    CHECK_CONNECTION()
+void Connection::remove(uint8_t index, uint8_t subIndex) {
+    CHECK_CONNECTION();
     writeBuffer[0] = RemoveWidgetCMD;
     writeBuffer[1] = index;
     writeBuffer[2] = subIndex;
-    write(serialFileDescriptor, writeBuffer, 3);
+    WRITE_SERIAL(3);
 }
 
-void Connection::addWidget(const QString& type, uint8_t index, uint8_t index2, const QJSValue& data) const {
-    CHECK_CONNECTION()
+void Connection::addWidget(const QString& type, uint8_t index, uint8_t index2, const QJSValue& data) {
+    CHECK_CONNECTION();
     if (type == "Button")
         writeBuffer[0] = CreateButtonCMD;
     else
@@ -174,7 +170,7 @@ void Connection::addWidget(const QString& type, uint8_t index, uint8_t index2, c
             QJSValue styleElement = elementIterator.value();
             while (!ControlGrid::parseStyleElement(styleElement, dataBuffer, dataEnd, part)) {
                 writeBuffer[3] = dataBuffer - writeBuffer - 5;
-                write(serialFileDescriptor, writeBuffer, writeBuffer[3] + 5);
+                WRITE_SERIAL(writeBuffer[3] + 5);
                 writeBuffer[0] = SetStyleDataCMD;
                 writeBuffer[1] = index;
                 writeBuffer[2] = 0;
@@ -199,11 +195,11 @@ void Connection::addWidget(const QString& type, uint8_t index, uint8_t index2, c
         if (dataBuffer == writeBuffer + 4) return;
         writeBuffer[3] = dataBuffer - writeBuffer - 5;
     }
-    write(serialFileDescriptor, writeBuffer, writeBuffer[3] + 5);
+    WRITE_SERIAL(writeBuffer[3] + 5);
 }
 
-void Connection::setStyle(uint8_t index, uint8_t subIndex, const QJSValue& data) const {
-    CHECK_CONNECTION()
+void Connection::setStyle(uint8_t index, uint8_t subIndex, const QJSValue& data) {
+    CHECK_CONNECTION();
     writeBuffer[0] = SetStyleDataCMD;
     writeBuffer[1] = index;
     writeBuffer[2] = subIndex;
@@ -226,7 +222,7 @@ void Connection::setStyle(uint8_t index, uint8_t subIndex, const QJSValue& data)
             QJSValue styleElement = elementIterator.value();
             while (!ControlGrid::parseStyleElement(styleElement, dataBuffer, dataEnd, part)) {
                 writeBuffer[3] = dataBuffer - writeBuffer - 5;
-                write(serialFileDescriptor, writeBuffer, writeBuffer[3] + 5);
+                WRITE_SERIAL(writeBuffer[3] + 5);
                 writeBuffer[0] = SetStyleDataCMD;
                 writeBuffer[1] = index;
                 writeBuffer[2] = subIndex;
@@ -242,5 +238,25 @@ void Connection::setStyle(uint8_t index, uint8_t subIndex, const QJSValue& data)
     }
     if (dataBuffer == writeBuffer + 4) return;
     writeBuffer[3] = dataBuffer - writeBuffer - 5;
-    write(serialFileDescriptor, writeBuffer, writeBuffer[3] + 5);
+    WRITE_SERIAL(writeBuffer[3] + 5);
+}
+
+void Connection::serialReadReady() {
+    qDebug() << "Serial Read:" << serialPort.readAll();
+}
+
+void Connection::serialErrorOccurred(QSerialPort::SerialPortError error) {
+    if (error == QSerialPort::ResourceError) {
+        serialPort.close();
+    } else if (error != QSerialPort::NoError
+        && error != QSerialPort::NotOpenError
+        && error != QSerialPort::DeviceNotFoundError) {
+        qWarning() << "Serial Error Occurred:" << error;
+        emit connectionError(QString("Serial Error Occurred: ") + QMetaEnum::fromType<QSerialPort::SerialPortError>().valueToKey(error));
+    }
+}
+
+void Connection::serialAboutToClose() {
+    serialConnected = false;
+    emit connectedChanged();
 }

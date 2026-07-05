@@ -172,6 +172,9 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
         }
     } else if ((cmd >> 6) == 1) { // Only operands
         switch (cmd) {
+        case SetBacklightBrightnessCMD:
+            display_brightness_set(operand1 << 8 | operand2);
+            break;
         case SetLayoutCMD:
             if (lvgl_port_lock(0)) {
                 lv_control_grid_set_layout(cg_act, (operand1 + 1) / (operand2 + 1), operand2 + 1);

@@ -101,7 +101,7 @@ static esp_err_t tinyusb_init() {
         .callback_line_coding_changed = NULL
     };
     ESP_ERROR_CHECK(tinyusb_cdcacm_init(&acm_cfg));
-    ESP_ERROR_CHECK(tinyusb_console_init(TINYUSB_CDC_ACM_0));
+    //ESP_ERROR_CHECK(tinyusb_console_init(TINYUSB_CDC_ACM_0));
     return ESP_OK;
 }
 

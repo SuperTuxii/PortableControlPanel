@@ -8,7 +8,8 @@
     TestFillCMD,\
     ClearCMD,\
     /* Operands & No Data*/\
-    SetLayoutCMD = 0x40,\
+    SetBacklightBrightnessCMD = 0x40,\
+    SetLayoutCMD,\
     MoveWidgetCMD,\
     ChangeWidgetSizeCMD,\
     RemoveWidgetCMD,\

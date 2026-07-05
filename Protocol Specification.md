@@ -21,13 +21,14 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 
 ### Only Operands Commands (0x40 - 0x7F)
 
-| Command | 1. Operand                  | 2. Operand                         | Meaning                                                                     |
-| ------- | --------------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
-| 0x40    | Cell Count<br>(1-256 Cells) | Column Count<br>(1-256 Columns)    | Set the Layout of the Control Grid                                          |
-| 0x41    | Cell Index (from)           | Cell Index (to)                    | Move Widget from the given Index to the given Index                         |
-| 0x42    | Cell Index 1                | Cell Index 2                       | Change the Widget at Cell Index 1 to span from Cell Index 1 to Cell Index 2 |
-| 0x43    | Cell Index                  | Sub Child Index (0 is main widget) | Remove the widget at the given Cell Index and Sub Child Index               |
-| 0x44    | Image Index                 | -                                  | Remove the image with the given index                                       |
+| Command | 1. Operand                    | 2. Operand                         | Meaning                                                                     |
+| ------- | ----------------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
+| 0x40    | Brightness (0-1023) High Byte | Brightness (0-1023) Low Byte       | Set the Brightness of the Backlight                                         |
+| 0x41    | Cell Count<br>(1-256 Cells)   | Column Count<br>(1-256 Columns)    | Set the Layout of the Control Grid                                          |
+| 0x42    | Cell Index (from)             | Cell Index (to)                    | Move Widget from the given Index to the given Index                         |
+| 0x43    | Cell Index 1                  | Cell Index 2                       | Change the Widget at Cell Index 1 to span from Cell Index 1 to Cell Index 2 |
+| 0x44    | Cell Index                    | Sub Child Index (0 is main widget) | Remove the widget at the given Cell Index and Sub Child Index               |
+| 0x45    | Image Index                   | -                                  | Remove the image with the given index                                       |
 
 ### Only Data Commands (0x80 - 0xBF)
 

@@ -7,8 +7,11 @@ Item {
     property alias displayHeight: lvglRenderer.height
     property alias tickPeriod: lvglRenderer.tickPeriod
     property alias displayBufferRatio: lvglRenderer.displayBufferRatio
+    property rect imageClipRect: Qt.rect(0, 0, displayWidth, displayHeight)
     implicitWidth: displayWidth
     implicitHeight: displayHeight
+    clip: true
+
 
     Item {
         anchors.fill: parent
@@ -22,7 +25,10 @@ Item {
     Image {
         id: image
         property int swap: 0
-        anchors.fill: parent
+        x: -parent.imageClipRect.x * (parent.implicitWidth / parent.imageClipRect.width)
+        y: -parent.imageClipRect.y * (parent.implicitHeight / parent.imageClipRect.height)
+        width: parent.displayWidth * (parent.implicitWidth / parent.imageClipRect.width)
+        height: parent.displayHeight * (parent.implicitHeight / parent.imageClipRect.height)
         source: "image://" + lvglRenderer.name + "/buf" + swap
         cache: false
 

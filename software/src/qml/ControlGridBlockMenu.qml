@@ -57,6 +57,13 @@ Popup {
                     implicitWidth: 225
                     implicitHeight: 125
                     anchors.centerIn: parent
+                    Component.onCompleted: popup.controlGrid.displayPanel.displaySizeRefreshed.connect(() => {
+                        demoDisplayPanel.changeDisplaySize(
+                            popup.controlGrid.displayPanel.displayWidth,
+                            popup.controlGrid.displayPanel.displayHeight
+                        );
+                        demoControlGrid.setLayout(1, 1);
+                    })
                     Component.onDestruction: demoControlGrid.lvglRenderer = null
                 }
 
@@ -456,8 +463,8 @@ Popup {
         demoControlGrid.columnPad = controlGrid.columnPad;
         clearStyleValues();
         loadBlock(blockData);
-        configureDemoDisplayCrop(blockData.rowSpan, blockData.columnSpan);
-        loadDemoDisplay(blockData.rowSpan, blockData.columnSpan);
+        configureDemoDisplayCrop(blockData ? blockData.rowSpan : 1, blockData ? blockData.columnSpan : 1);
+        loadDemoDisplay(blockData ? blockData.rowSpan : 1, blockData ? blockData.columnSpan : 1);
     }
 
     onClosed: demoControlGrid.clear()

@@ -15,8 +15,8 @@ class LvglRenderer : public QObject, public QQmlParserStatus {
     Q_OBJECT
     Q_INTERFACES(QQmlParserStatus)
     QML_ELEMENT
-    Q_PROPERTY(int width READ getWidth WRITE setWidth NOTIFY propertiesInitialized)
-    Q_PROPERTY(int height READ getHeight WRITE setHeight NOTIFY propertiesInitialized)
+    Q_PROPERTY(int width READ getWidth WRITE setWidth NOTIFY displaySizeRefreshed)
+    Q_PROPERTY(int height READ getHeight WRITE setHeight NOTIFY displaySizeRefreshed)
     Q_PROPERTY(int tickPeriod READ getTickPeriodMs WRITE setTickPeriodMs NOTIFY propertiesInitialized)
     Q_PROPERTY(size_t displayBufferRatio READ getDisplayBufferRatio WRITE setDisplayBufferRatio NOTIFY propertiesInitialized)
     Q_PROPERTY(QString name READ getName WRITE setName NOTIFY propertiesInitialized)
@@ -64,8 +64,10 @@ public:
     static uint32_t toAscii(Qt::Key key);
 public slots:
     void setMouseArea(QObject* mouseArea) const { lvglImageProvider->setMouseArea(mouseArea); }
+    void setDisplaySize(int newWidth, int newHeight);
 signals:
     void propertiesInitialized();
+    void displaySizeRefreshed();
 };
 
 #endif //CONTROLPANELSOFTWARE_LVGLRENDERER_H

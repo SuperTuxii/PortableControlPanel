@@ -2,6 +2,7 @@ import QtQuick
 import LvglSimulator
 
 Item {
+    signal displaySizeRefreshed()
     property alias name: lvglRenderer.name
     property alias displayWidth: lvglRenderer.width
     property alias displayHeight: lvglRenderer.height
@@ -51,7 +52,13 @@ Item {
         id: lvglRenderer
     }
 
+    Component.onCompleted: lvglRenderer.displaySizeRefreshed.connect(displaySizeRefreshed)
+
     function transferRenderer(object) {
         object.lvglRenderer = lvglRenderer;
+    }
+
+    function changeDisplaySize(width: int, height: int): void {
+        lvglRenderer.setDisplaySize(width, height);
     }
 }

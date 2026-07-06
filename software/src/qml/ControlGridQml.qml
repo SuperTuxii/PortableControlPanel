@@ -16,12 +16,13 @@ ControlGrid {
 
     Component.onCompleted: {
         displayPanel.transferRenderer(controlGrid);
+        displayPanel.displaySizeRefreshed.connect(loadLayout);
+        Connection.tryConnect();
         loadLayout();
     }
     onLayoutDataChanged: loadLayout
 
     function loadLayout(): void {
-        Connection.tryConnect();
         setLayout(rows, columns);
         Connection.setLayout(rows, columns);
         settings.loadBlocks(layoutName, (block) => {

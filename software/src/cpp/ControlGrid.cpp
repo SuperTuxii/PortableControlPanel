@@ -1,4 +1,5 @@
 #include "ControlGrid.h"
+#include "Connection.h"
 #include "src/LvglRenderer.h"
 #include <QJSValueIterator>
 #include "src/core/lv_obj_private.h"
@@ -6,6 +7,12 @@
 #define CHECK_CONTROL_GRID(value)   if (!controlGrid) return value;
 
 static uint8_t styleData[5];
+
+void ControlGrid::reinitControlGrid() {
+    lv_lock();
+    controlGrid = lv_control_grid_create(lvglRenderer->getScreen());
+    lv_unlock();
+}
 
 ControlGrid::ControlGrid(QObject* parent) :
         QObject(parent),

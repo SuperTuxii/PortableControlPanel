@@ -3,7 +3,6 @@
 #include <QObject>
 #include <qqmlintegration.h>
 
-#include "Connection.h"
 #include "src/LvglRenderer.h"
 extern "C" {
 #include "lv_control_grid.h"
@@ -23,6 +22,8 @@ class ControlGrid : public QObject {
 private:
     LvglRenderer *lvglRenderer;
     lv_control_grid_t *controlGrid;
+
+    void reinitControlGrid();
 public:
     explicit ControlGrid(QObject *parent = nullptr);
     ~ControlGrid() override;
@@ -45,6 +46,7 @@ public:
             lv_lock();
             controlGrid = lv_control_grid_create(lvglRenderer->getScreen());
             lv_unlock();
+            connect(lvglRenderer, &LvglRenderer::displaySizeRefreshed, this, &ControlGrid::reinitControlGrid);
         }
         emit sizeChanged();
         emit layoutChanged();

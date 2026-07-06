@@ -1,5 +1,6 @@
+#include <QRegularExpression>
 #include <QJSValueIterator>
-#include <QFile>
+#include <QDir>
 #include "Connection.h"
 #include "ControlGrid.h"
 
@@ -35,26 +36,59 @@ void Connection::connectSerial() {
     if (isConnected())
         return;
 
-    for (int i = 0; i < 10; ++i) {
-        if (QString port = "/dev/ttyACM" + QString::number(i); QFile::exists(port)) {
-            serialPort.setPortName(port);
+    QDir deviceDirectory("/dev");
+    for (const auto& port : deviceDirectory.entryList({"ttyACM*"}, QDir::System | QDir::Files)) {
+        serialPort.setPortName("/dev/" + port);
+        serialPort.setBaudRate(QSerialPort::Baud115200);
+        serialPort.setDataBits(QSerialPort::Data8);
+        serialPort.setParity(QSerialPort::NoParity);
+        serialPort.setStopBits(QSerialPort::OneStop);
+        serialPort.setFlowControl(QSerialPort::NoFlowControl);
+        if (serialPort.open(QIODevice::ReadWrite)) {
+            writeBuffer[0] = PrintProtocolInfoCMD;
+            WRITE_SERIAL(1);
+
+            uint8_t action = 0;
+            if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(100)) goto initializeProtocolFailure;
+            serialPort.read(reinterpret_cast<char*>(&action), 1);
+            if (action != ProtocolInfoACT) goto initializeProtocolFailure;
+            uint8_t textLength = 0;
+            if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(100)) goto initializeProtocolFailure;
+            serialPort.read(reinterpret_cast<char*>(&textLength), 1);
+            while (serialPort.bytesAvailable() < textLength) if (!serialPort.waitForReadyRead(100)) break;
+            if (serialPort.bytesAvailable() < textLength) goto initializeProtocolFailure;
+            QString text = QString(serialPort.read(textLength));
+            QStringList data = text.replace(QRegularExpression(R"(^\w* v([^ ]*) (\d*)x(\d*))"), R"(\1 \2 \3)").split(" ");
+            if (data[0] != PROTOCOL_VERSION) {
+                QString message = QString("Serial Protocol Version not matching: ") + PROTOCOL_VERSION + "/" + data[0];
+                qWarning() << message.toStdString().c_str();
+                emit connectionError(message);
+                goto initializeProtocolFailure;
+            }
+            bool ok;
+            int width = data[1].toInt(&ok);
+            int height = 0;
+            if (ok)
+                height = data[2].toInt(&ok);
+            if (!ok || width <= 0 || height <= 0) {
+                qWarning() << "Failed to parse display size from Serial Protocol Information";
+                emit connectionError("Failed to parse display size from Serial Protocol Information");
+                goto initializeProtocolFailure;
+            }
+            emit updateDisplaySize(width, height);
+
+            serialConnected = true;
+            clear();
+            emit connectedChanged();
             break;
         }
-    }
-    serialPort.setBaudRate(QSerialPort::Baud115200);
-    serialPort.setDataBits(QSerialPort::Data8);
-    serialPort.setParity(QSerialPort::NoParity);
-    serialPort.setStopBits(QSerialPort::OneStop);
-    serialPort.setFlowControl(QSerialPort::NoFlowControl);
-
-    if (serialPort.open(QIODevice::ReadWrite)) {
-        serialConnected = true;
-        clear();
-        emit connectedChanged();
-    } else {
         qWarning() << "Serial Connection Error:" << serialPort.errorString();
-        emit connectionError("Serial Connection Failed");
+        continue;
+initializeProtocolFailure:
+        serialPort.close();
     }
+    if (!serialConnected)
+        emit connectionError("Serial Connection Failed");
 }
 
 void Connection::setBacklightBrightness(int brightness) {
@@ -242,7 +276,7 @@ void Connection::setStyle(uint8_t index, uint8_t subIndex, const QJSValue& data)
 }
 
 void Connection::serialReadReady() {
-    qDebug() << "Serial Read:" << serialPort.readAll();
+    if (!serialConnected) return;
 }
 
 void Connection::serialErrorOccurred(QSerialPort::SerialPortError error) {
@@ -250,13 +284,15 @@ void Connection::serialErrorOccurred(QSerialPort::SerialPortError error) {
         serialPort.close();
     } else if (error != QSerialPort::NoError
         && error != QSerialPort::NotOpenError
-        && error != QSerialPort::DeviceNotFoundError) {
+        && error != QSerialPort::DeviceNotFoundError
+        && error != QSerialPort::TimeoutError) {
         qWarning() << "Serial Error Occurred:" << error;
         emit connectionError(QString("Serial Error Occurred: ") + QMetaEnum::fromType<QSerialPort::SerialPortError>().valueToKey(error));
     }
 }
 
 void Connection::serialAboutToClose() {
+    if (!serialConnected) return;
     serialConnected = false;
     emit connectedChanged();
 }

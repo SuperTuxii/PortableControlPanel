@@ -1,9 +1,12 @@
 #ifndef CONTROLPANELSOFTWARE_PROTOCOL_MACROS_H
 #define CONTROLPANELSOFTWARE_PROTOCOL_MACROS_H
 
+#define PROTOCOL_VERSION "0.1-alpha"
+
 #define PROTOCOL_COMMANDS_ENUM enum Commands {\
     /* No Operands & No Data */\
-    RestartCMD = 0x00,\
+    PrintProtocolInfoCMD = 0x00,\
+    RestartCMD,\
     DeepSleepCMD,\
     TestFillCMD,\
     ClearCMD,\
@@ -25,6 +28,17 @@
     CreateButtonCMD,\
     SubTextCMD,\
     SubImageCMD,\
+};
+
+#define PROTOCOL_ACTIONS_ENUM enum Actions {\
+    /* No Operands & No Data */\
+    /*X = 0x00,*/\
+    /* Operands & No Data*/\
+    /*Y = 0x40,*/\
+    /* No Operands & Data */\
+    ProtocolInfoACT = 0x80,\
+    /* Operands & Data */\
+    /*Z = 0xC0,*/\
 };
 
 #define PROTOCOL_STYLE_KEYS_ENUM enum StyleKeys {\

@@ -28,10 +28,12 @@ public:
     [[nodiscard]] bool isConnected() const;
 
     PROTOCOL_COMMANDS_ENUM
+    PROTOCOL_ACTIONS_ENUM
     PROTOCOL_STYLE_KEYS_ENUM
     PROTOCOL_STYLE_STATES_ENUM
     PROTOCOL_STYLE_PARTS_ENUM
     Q_ENUM(Commands)
+    Q_ENUM(Actions)
     Q_ENUM(StyleKeys)
     Q_ENUM(StyleStates)
     Q_ENUM(StyleParts)
@@ -68,6 +70,8 @@ public slots:
 signals:
     void connectedChanged();
     void connectionError(QString error);
+
+    void updateDisplaySize(int width, int height);
 };
 
 #endif //CONTROLPANELSOFTWARE_CONNECTION_H

@@ -9,15 +9,16 @@ If the 7th bit of the command is set then the command will be followed by 2 oper
 If the 8th bit (MSB) of the command is set then the command will be followed by 2 operands.
 This means there are 64 possible commands for each of the 4 possible types (no operands and no data, only operands, only data, both operands and data).
 
-## Commands
+## Commands (Configuration Software to Display)
 ### No Operands and no Data Commands (0x00 - 0x3F)
 
 | Command | Meaning                    |
 | ------- | -------------------------- |
-| 0x00    | Restarts the ESP           |
-| 0x01    | Starts the Deep Sleep      |
-| 0x02    | Test Fill the Control Grid |
-| 0x03    | Clear the Control Grid     |
+| 0x00    | Print Protocol Information |
+| 0x01    | Restarts the ESP           |
+| 0x02    | Starts the Deep Sleep      |
+| 0x03    | Test Fill the Control Grid |
+| 0x04    | Clear the Control Grid     |
 
 ### Only Operands Commands (0x40 - 0x7F)
 
@@ -48,6 +49,19 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 | 0xC3    | Cell Index 1 | Cell Index 2                           | Style data                                      | Create a Button from Cell Index 1 to Cell Index 2                                                                    |
 | 0xC4    | Cell Index   | Sub Child Index<br>(0 will create new) | Text<br>(Zero terminated) + Style Data          | Add/Set text as a sub widget to the widget at the given Cell Index                                                   |
 | 0xC5    | Cell Index   | Sub Child Index<br>(0 will create new) | Image Index<br>(1 Byte)<br>+ Style data         | Add/Set image as a sub widget to the widget at the given Cell Index                                                  |
+
+## Actions (Display to Configuration Software)
+### No Operands and no Data Actions (0x00 - 0x3F)
+
+### Only Operands Actions (0x40 - 0x7F)
+
+### Only Data Actions (0x80 - 0xBF)
+
+| Command | Data | Meaning                                         |
+| ------- | ---- | ----------------------------------------------- |
+| 0x80    | Text | Protocol Information (Response to Command 0x00) |
+
+### Operands and Data Actions (0xC0 - 0xFF)
 
 ## Data
 ### Style data

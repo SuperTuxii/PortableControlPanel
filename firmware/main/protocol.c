@@ -19,6 +19,7 @@ static uint8_t tuCmd;
 static uint8_t tuOperands[] = {0, 0};
 static uint8_t tuDataLength = 0;
 static uint8_t tuData[256];
+static uint8_t writeBuffer[260];
 
 void tinyusbReadReady() {
     size_t rx_size = 0;
@@ -148,6 +149,18 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
 #endif
     if ((cmd >> 6) == 0) { // No operands or data
         switch (cmd) {
+        case PrintProtocolInfoCMD:
+            writeBuffer[0] = ProtocolInfoACT;
+            lv_obj_t *screen = lv_screen_active();
+            int textLength = sprintf((char *) writeBuffer + 2, "ControlPanelFirmware v%s %ldx%ld", PROTOCOL_VERSION, lv_obj_get_width(screen), lv_obj_get_height(screen));
+            if (textLength < 0 || textLength > UINT8_MAX) {
+                ESP_LOGE(COMMS_TAG, "Protocol Information Text has an invalid size: %d", textLength);
+                return;
+            }
+            writeBuffer[1] = textLength;
+            tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, textLength + 2);
+            tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+            break;
         case RestartCMD:
             fflush(stdout);
             display_backlight_off();

@@ -278,6 +278,10 @@ Window {
     Component.onCompleted: {
         Connection.connectedChanged.connect(onConnectionChanged);
         Connection.connectionError.connect(onConnectionError);
+        Connection.updateDisplaySize.connect((width, height) => {
+            if (displayPanel.displayWidth !== width || displayPanel.displayHeight !== height)
+                displayPanel.changeDisplaySize(width, height);
+        });
     }
 
     function onConnectionChanged(): void {

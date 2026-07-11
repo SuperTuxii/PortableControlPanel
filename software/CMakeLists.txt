@@ -52,7 +52,7 @@ qt_add_resources(ControlPanelSoftwareApp "toastify-icons"
     FILES ${toastify_resources}
 )
 
-set_source_files_properties(src/qml/Theme.qml
+set_source_files_properties(src/qml/Theme.qml src/qml/Utils.qml
     PROPERTIES QT_QML_SINGLETON_TYPE TRUE
 )
 qt_add_qml_module(ControlPanelSoftwareApp

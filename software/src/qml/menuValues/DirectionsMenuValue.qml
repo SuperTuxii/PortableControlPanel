@@ -14,6 +14,8 @@ RowLayout {
     property alias value: textField.text
     property list<int> numberValues: []
     property bool valid: false
+    property var preprocessor: (string) => string
+    property var parser: (string) => Utils.parseDirectionsCalc(string, directions, min, max)
 
     spacing: 0
     uniformCellSizes: true
@@ -30,64 +32,34 @@ RowLayout {
         id: textField
         text: layout.min > 0 ? layout.min : 0
         color: layout.valid ? Theme.labelWhite : Theme.labelRed
+        padding: 4
         horizontalAlignment: TextInput.AlignHCenter
         verticalAlignment: TextInput.AlignVCenter
         Layout.fillHeight: true
         Layout.fillWidth: true
         background: Rectangle {
-            implicitHeight: 45
             color: Theme.textFieldBackground
             border.width: Theme.textFieldBorderWidth
             border.color: Theme.textFieldBorder
             radius: Theme.textFieldRadius
         }
 
-        Component.onCompleted: layout.valid = validate()
-        onTextChanged: layout.valid = validate()
-        onEditingFinished: {
-            tryCorrect();
-            layout.valid = validate();
-        }
-
-
-        function tryCorrect() {
-            if (text.length === 0) {
-                text = layout.min > 0 ? layout.min : 0;
-            } else {
-                if (!(/^[\s\d;-]*$/).test(text))
-                    return;
-                let values = text.split(";");
-                if (values.length !== 1 && values.length !== layout.directions && !(layout.directions === 4 && values.length === 2))
-                    return;
-                for (const i in values) {
-                    const numberValue = parseInt(values[i]);
-                    if (isNaN(numberValue))
-                        values[i] = layout.min > 0 ? layout.min : 0;
-                    if (numberValue < layout.min)
-                        values[i] = layout.min;
-                    if (numberValue > layout.max)
-                        values[i] = layout.max;
-                }
-                text = values.join(";");
-            }
-        }
+        Component.onCompleted: layout.revalidate()
+        onTextChanged: layout.revalidate()
+        onEditingFinished: layout.revalidate()
 
         function validate() {
-            if (text.length !== 0) {
-                if (!(/^[\s\d;-]*$/).test(text))
-                    return false;
-                let values = text.split(";");
-                if (values.length !== 1 && values.length !== layout.directions && !(layout.directions === 4 && values.length === 2))
-                    return false;
-                for (const value of values) {
-                    const numberValue = parseInt(value);
-                    if (isNaN(numberValue) || numberValue < layout.min || numberValue > layout.max)
-                        return false;
-                }
-                layout.numberValues = values;
-                return true;
-            }
-            return false;
+            const value = layout.parser(layout.preprocessor(text));
+            if (value !== undefined)
+                layout.numberValues = value;
+            return value !== undefined;
         }
+    }
+
+    onMinChanged: revalidate()
+    onMaxChanged: revalidate()
+
+    function revalidate(): void {
+        valid = textField.validate()
     }
 }

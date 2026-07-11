@@ -41,9 +41,15 @@ public:
         QString key = QMetaEnum::fromType<StyleStates>().valueToKey(value);
         return key.isNull() ? key : key.slice(5);
     }
+    Q_INVOKABLE static int styleStateFromString(const QString& value) {
+        return QMetaEnum::fromType<StyleStates>().keyToValue(("State" + value).toStdString().c_str());
+    }
     Q_INVOKABLE static QString stylePartString(const int value) {
         QString key = QMetaEnum::fromType<StyleParts>().valueToKey(value);
         return key.isNull() ? key : key.slice(4);
+    }
+    Q_INVOKABLE static int stylePartFromString(const QString& value) {
+        return QMetaEnum::fromType<StyleParts>().keyToValue(("Part" + value).toStdString().c_str());
     }
     Q_INVOKABLE static QString styleKeyString(const int value) {
         return QMetaEnum::fromType<StyleKeys>().valueToKey(value);

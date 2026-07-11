@@ -25,15 +25,7 @@ ControlGrid {
     function loadLayout(): void {
         setLayout(rows, columns);
         Connection.setLayout(rows, columns);
-        settings.loadBlocks(layoutName, (block) => {
-            let index = (block.row * columns) + block.column;
-            let index2 = index + (block.columnSpan-1) + ((block.rowSpan-1) * columns);
-            addWidget(block.type, index, index2);
-            for (const styleSelector in block.style) {
-                setStyle(index, 0, styleSelector, block.style[styleSelector]);
-            }
-            Connection.addWidget(block.type, index, index2, block.style);
-        });
+        settings.loadBlocks(layoutName, addBlock);
     }
 
     function findBlock(row: int, column: int): variant {
@@ -53,6 +45,19 @@ ControlGrid {
         let index2 = index + (data.columnSpan-1) + ((data.rowSpan-1) * columns);
         if (!addWidget(data.type, index, index2))
             return false;
+
+        let sizePosData = { index: index };
+        insertCoordsData(sizePosData);
+        const macros = {};
+        Utils.buildMacros(
+            macros, data.style,
+            sizePosData.width, sizePosData.height,
+            data.row, data.column,
+            data.rowSpan, data.columnSpan
+        );
+        if (Utils.refreshStyleData(macros, data.style))
+            settings.editBlock(layoutName, data.row, data.column, { style: data.style });
+
         for (const styleSelector in data.style) {
             setStyle(index, 0, styleSelector, data.style[styleSelector]);
         }
@@ -67,7 +72,7 @@ ControlGrid {
         dragTarget.column = block.column;
         dragTarget.rowSpan = block.rowSpan;
         dragTarget.columnSpan = block.columnSpan;
-        setupDragTarget(dragTarget);
+        insertCoordsData(dragTarget);
     }
 
     function applyDragTransforms(): void {
@@ -93,31 +98,56 @@ ControlGrid {
     function endDrag(): void {
         let block = findBlock(Math.floor(dragTarget.index / columns), dragTarget.index % columns);
         let toIndex = (dragTarget.row * columns) + dragTarget.column;
-        if (0 in block.style)
-            controlGrid.setStyle(dragTarget.index, 0, Connection.PartMain, [
-                { attrKey: Connection.TranslateX,
-                    value: (block.style[0].find((style) => style.attrKey === Connection.TranslateX) ?? { value: [0, 0] }).value },
-                { attrKey: Connection.TransformWidth,
-                    value: (block.style[0].find((style) => style.attrKey === Connection.TransformWidth) ?? { value: [0, 0] }).value }
-            ]);
-        else
-            controlGrid.setStyle(dragTarget.index, 0, Connection.PartMain, [
-                { attrKey: Connection.TranslateX, value: [0, 0] },
-                { attrKey: Connection.TransformWidth, value: [0, 0] }
-            ]);
-        if (toIndex !== dragTarget.index) {
+        if (toIndex !== dragTarget.index)
             controlGrid.move(dragTarget.index, toIndex);
-            Connection.move(dragTarget.index, toIndex);
-        }
-        if (dragTarget.rowSpan !== block.rowSpan || dragTarget.columnSpan !== block.columnSpan) {
+        if (dragTarget.rowSpan !== block.rowSpan || dragTarget.columnSpan !== block.columnSpan)
             controlGrid.changeSize(toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1));
-            Connection.changeSize(toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1));
-        }
-        settings.editBlock(layoutName, block.row, block.column, {
+        let data = {
             row: dragTarget.row,
             column: dragTarget.column,
             rowSpan: dragTarget.rowSpan,
-            columnSpan: dragTarget.columnSpan
-        });
+            columnSpan: dragTarget.columnSpan,
+        }
+        let sizePosData = { index: toIndex };
+        insertCoordsData(sizePosData);
+        const macros = {};
+        Utils.buildMacros(
+            macros, block.style,
+            sizePosData.width, sizePosData.height,
+            dragTarget.row, dragTarget.row,
+            dragTarget.rowSpan, dragTarget.columnSpan
+        );
+        if (Utils.refreshStyleData(macros, block.style)) {
+            data.style = block.style;
+            remove((data.row * columns) + data.column, 0);
+            addWidget(block.type, toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1));
+            for (const styleSelector in data.style) {
+                setStyle(toIndex, 0, styleSelector, data.style[styleSelector]);
+            }
+            Connection.remove(dragTarget.index, 0);
+            Connection.addWidget(block.type, toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1), data.style);
+        } else {
+            if (0 in block.style)
+                controlGrid.setStyle(toIndex, 0, Connection.PartMain, [
+                    {
+                        attrKey: Connection.TranslateX,
+                        value: (block.style[0].find((style) => style.attrKey === Connection.TranslateX) ?? {value: [0, 0]}).value
+                    },
+                    {
+                        attrKey: Connection.TransformWidth,
+                        value: (block.style[0].find((style) => style.attrKey === Connection.TransformWidth) ?? {value: [0, 0]}).value
+                    }
+                ]);
+            else
+                controlGrid.setStyle(toIndex, 0, Connection.PartMain, [
+                    {attrKey: Connection.TranslateX, value: [0, 0]},
+                    {attrKey: Connection.TransformWidth, value: [0, 0]}
+                ]);
+            if (toIndex !== dragTarget.index)
+                Connection.move(dragTarget.index, toIndex);
+            if (dragTarget.rowSpan !== block.rowSpan || dragTarget.columnSpan !== block.columnSpan)
+                Connection.changeSize(toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1));
+        }
+        settings.editBlock(layoutName, block.row, block.column, data);
     }
 }

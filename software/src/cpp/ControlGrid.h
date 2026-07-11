@@ -71,7 +71,7 @@ public slots:
     void subImage(uint8_t index, uint8_t subIndex, uint8_t imageIndex) const;
     void setStyle(uint8_t index, uint8_t subIndex, lv_style_selector_t styleSelector, const QJSValue& data) const;
 
-    void setupDragTarget(QJSValue data) const;
+    void insertCoordsData(QJSValue data) const;
 signals:
     void sizeChanged();
     void layoutChanged();

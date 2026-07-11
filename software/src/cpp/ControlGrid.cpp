@@ -322,11 +322,16 @@ static lv_obj_t *findCellChildByIndex(lv_control_grid_t *cg, const uint8_t index
     return nullptr;
 }
 
-void ControlGrid::setupDragTarget(QJSValue data) const {
+void ControlGrid::insertCoordsData(QJSValue data) const {
     CHECK_CONTROL_GRID()
     lv_lock();
     lv_obj_t *object = findCellChildByIndex(controlGrid, data.property("index").toUInt());
     if (object == nullptr) return;
+    if (data.hasProperty("subIndex") && data.property("subIndex").toInt() > 0) {
+        object = lv_obj_get_child(object, data.property("subIndex").toInt() - 1);
+        if (object == nullptr) return;
+    }
+    lv_obj_update_layout(object);
     int32_t baseX = object->coords.x1 - controlGrid->gridContainer->coords.x1 - controlGrid->outerPad - lv_obj_get_style_translate_x(object, LV_PART_MAIN);
     int32_t baseY = object->coords.y1 - controlGrid->gridContainer->coords.y1 - controlGrid->outerPad - lv_obj_get_style_translate_y(object, LV_PART_MAIN);
     int32_t baseWidth = lv_area_get_width(&object->coords);

@@ -16,6 +16,7 @@ Popup {
     property int column
     property int rows: controlGrid.rows
     property int columns: controlGrid.columns
+    property var macros: {}
 
     anchors.centerIn: Overlay.overlay
     width: Math.max(Overlay.overlay.width / 2, Math.min(640, Overlay.overlay.width))
@@ -182,17 +183,23 @@ Popup {
                                         child = child.reference;
                                     }
                                     if (child instanceof DirectionsMenuValue)
-                                        data.push({ attrKey: parseInt(child.attrKey), name: child.propName, value: Array.from(child.numberValues) });
+                                        data.push({ attrKey: parseInt(child.attrKey), name: child.propName, value: Array.from(child.numberValues), text: child.value });
                                     else if (child instanceof ColorMenuValue)
                                         data.push({ attrKey: parseInt(child.attrKey), name: child.propName, value: (child.value.a === 1 ? child.value.toString() + "FF" : "#" + child.value.toString().slice(3, 9) + child.value.toString().slice(1, 3)).toUpperCase() });
+                                    else if (child instanceof IntMenuValue)
+                                        data.push({ attrKey: parseInt(child.attrKey), name: child.propName, value: child.numberValue, text: child.value });
                                     else
                                         data.push({ attrKey: parseInt(child.attrKey), name: child.propName, value: child.value });
                                 }
-                                dirty = true;
-                                Qt.callLater(popup.updateDemoDisplayLive);
                                 return data;
                             }
                             property bool dirty: false
+                            onDataChanged: {
+                                if (!dirty) {
+                                    dirty = true;
+                                    Qt.callLater(popup.updateDemoDisplayLive)
+                                }
+                            }
                             anchors.fill: parent
                         }
                         MouseArea {
@@ -345,11 +352,11 @@ Popup {
                 attrKey: "rowSpan"
                 propName: "Row Span"
                 min: 1
-                max: popup.rows - rowMenuValue.value
+                max: popup.rows - rowMenuValue.numberValue
                 Layout.maximumHeight: 30
                 onValueChanged: {
-                    configureDemoDisplayCrop(rowSpanMenuValue.value, columnSpanMenuValue.value);
-                    updateDemoDisplayLive(true);
+                    configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
+                    updateDemoDisplayLive();
                 }
             }
             IntMenuValue {
@@ -357,11 +364,11 @@ Popup {
                 attrKey: "columnSpan"
                 propName: "Column Span"
                 min: 1
-                max: popup.columns - columnMenuValue.value
+                max: popup.columns - columnMenuValue.numberValue
                 Layout.maximumHeight: 30
                 onValueChanged: {
-                    configureDemoDisplayCrop(rowSpanMenuValue.value, columnSpanMenuValue.value);
-                    updateDemoDisplayLive(true);
+                    configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
+                    updateDemoDisplayLive();
                 }
             }
             Item {
@@ -446,6 +453,7 @@ Popup {
     }
 
     onOpened: {
+        macros = {};
         failLabel.text = "";
         failLabel.visible = false;
         colorPicker.x = Qt.binding(() => Math.min(Overlay.overlay.width - colorPicker.width, popup.x + popup.width));
@@ -457,6 +465,7 @@ Popup {
             typeMenuValue.value = popup.blockTypes[0];
         stateComboBox.currentIndex = 0;
         partComboBox.currentIndex = 0;
+        styleValueLayout.dirty = false;
         demoControlGrid.setLayout(rows, columns);
         demoControlGrid.outerPad = controlGrid.outerPad;
         demoControlGrid.rowPad = controlGrid.rowPad;
@@ -492,10 +501,14 @@ Popup {
             demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
         }
     }
-    function updateDemoDisplayLive(force): void {
-        if ((!styleValueLayout.dirty && !force) || !popup.visible) return;
+    function updateDemoDisplayLive(): void {
+        if (!popup.visible) return;
         demoControlGrid.remove(0, 0);
-        demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpanMenuValue.value-1) * columns) + (columnSpanMenuValue.value-1));
+        demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpanMenuValue.numberValue-1) * columns) + (columnSpanMenuValue.numberValue-1));
+
+        buildMacros();
+        revalidateStyleValue();
+
         let styleSet = false;
         for (const styleSelector in menuValueLayout.styleData) {
             if (parseInt(styleSelector) === menuValueLayout.styleSelector) {
@@ -536,7 +549,10 @@ Popup {
         };
         for (let menuValue of rightLayout.children) {
             if (menuValue.attrKey === undefined) continue;
-            data[menuValue.attrKey] = menuValue.value;
+            if (menuValue instanceof IntMenuValue)
+                data[menuValue.attrKey] = menuValue.numberValue;
+            else
+                data[menuValue.attrKey] = menuValue.value;
         }
         if (!newBlock) {
             controlGrid.remove((row * columns) + column, 0);
@@ -588,24 +604,15 @@ Popup {
     function addStyleKeyValue(styleKeyValue: int, styleKeyText: string): variant {
         if ((styleKeyValue >= Connection.NumberStyleKeyMin && styleKeyValue <= Connection.NumberStyleKeyMax)
             || (styleKeyValue >= Connection.Number16StyleKeyMin && styleKeyValue <= Connection.Number16StyleKeyMax)) {
-            if (styleKeyValue === Connection.PadAll || styleKeyValue === Connection.MarginAll) {
+            let directions = Utils.getStyleKeyDirections(styleKeyValue);
+            if (directions > 0) {
                 return addStyleValue("menuValues/DirectionsMenuValue.qml", {
                     attrKey: styleKeyValue,
                     propName: styleKeyText,
-                    directions: 4,
+                    directions: directions,
                     min: -(1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)),
                     max: (1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)) - 1,
-                });
-            } else if (Connection.styleKeyString(styleKeyValue).endsWith("X")
-                || styleKeyValue === Connection.TransformWidth
-                || styleKeyValue === Connection.TranslateScale
-                || (styleKeyValue >= Connection.BackgroundGradParams1 && styleKeyValue <= Connection.BackgroundGradParams2)) {
-                return addStyleValue("menuValues/DirectionsMenuValue.qml", {
-                    attrKey: styleKeyValue,
-                    propName: styleKeyText,
-                    directions: 2,
-                    min: -(1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)),
-                    max: (1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)) - 1,
+                    preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
                 });
             } else {
                 return addStyleValue("menuValues/IntMenuValue.qml", {
@@ -613,6 +620,7 @@ Popup {
                     propName: styleKeyText,
                     min: -(1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)),
                     max: (1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)) - 1,
+                    preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
                 });
             }
         } else if (styleKeyValue >= Connection.ColorOpacityStyleKeyMin && styleKeyValue <= Connection.ColorOpacityStyleKeyMax) {
@@ -627,6 +635,7 @@ Popup {
                 propName: styleKeyText,
                 min: 0,
                 max: (1 << 8) - 1,
+                preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
             });
         } else if (styleKeyValue >= Connection.NonTypeStyleKeyMin && styleKeyValue <= Connection.NonTypeStyleKeyMax) {
             if (styleKeyText.startsWith("Font")) {
@@ -684,13 +693,99 @@ Popup {
         if (menuValueLayout.styleSelector in menuValueLayout.styleData) {
             for (let styleData of menuValueLayout.styleData[menuValueLayout.styleSelector]) {
                 let menuValue = addStyleKeyValue(styleData.attrKey, styleData.name);
-                if (menuValue instanceof DirectionsMenuValue)
-                    menuValue.value = styleData.value.join(";");
-                else if (menuValue instanceof ColorMenuValue)
+                if (menuValue instanceof DirectionsMenuValue) {
+                    menuValue.numberValues = styleData.value;
+                    menuValue.value = styleData.text;
+                } else if (menuValue instanceof ColorMenuValue) {
                     menuValue.value = styleData.value.length > 7 ? "#" + styleData.value.slice(7, 9) + styleData.value.slice(1, 7) : styleData.value;
-                else if (!(menuValue instanceof NonTypeMenuValue))
+                } else if (menuValue instanceof IntMenuValue) {
+                    menuValue.numberValue = styleData.value;
+                    menuValue.value = styleData.text;
+                } else if (!(menuValue instanceof NonTypeMenuValue)) {
                     menuValue.value = styleData.value;
+                }
             }
         }
+    }
+
+    function buildMacros(): void {
+        let sizePosData = { index: 0 };
+        demoControlGrid.insertCoordsData(sizePosData);
+        Utils.buildDimensionMacros(
+            macros,
+            sizePosData.width,
+            sizePosData.height,
+            rowMenuValue.numberValue,
+            columnMenuValue.numberValue,
+            rowSpanMenuValue.numberValue,
+            columnSpanMenuValue.numberValue
+        );
+        if ("style" in macros) {
+            for (let styleData of styleValueLayout.data) {
+                if (typeof styleData.value === "number")
+                    macros.style[menuValueLayout.styleSelector][styleData.name.toLowerCase()] = styleData.value;
+                else if (styleData.value.length && typeof styleData.value !== "string")
+                    macros.style[menuValueLayout.styleSelector][styleData.name.toLowerCase()] = styleData.value.length === 1 ? styleData.value[0] : styleData.value;
+            }
+        } else {
+            Utils.buildStyleMacros(macros, menuValueLayout.styleData);
+        }
+    }
+    function revalidateStyleValue(): void {
+        for (let refreshes = 0; refreshes < 10; refreshes++) {
+            let changed = false;
+            for (let child of styleValueLayout.children) {
+                if (child === styleValuePlaceholder) {
+                    if (!child.reference) continue;
+                    child = child.reference;
+                }
+                if (child instanceof DirectionsMenuValue) {
+                    let oldValue = Array.from(child.numberValues);
+                    child.revalidate();
+                    if (oldValue.length !== child.numberValues.length
+                        || !oldValue.every((value, index) => value === child.numberValues[index])) {
+                        macros.style[menuValueLayout.styleSelector][child.propName.toLowerCase()] = child.numberValues.length === 1 ? child.numberValues[0] : child.numberValues;
+                        changed = true;
+                    }
+                } else if (child instanceof IntMenuValue) {
+                    let oldValue = child.numberValue;
+                    child.revalidate();
+                    if (oldValue !== child.numberValue) {
+                        macros.style[menuValueLayout.styleSelector][child.propName.toLowerCase()] = child.numberValue;
+                        changed = true;
+                    }
+                }
+            }
+            changed = changed || Utils.refreshStyleDataSingle(macros, menuValueLayout.styleData, menuValueLayout.styleSelector);
+            if (!changed) return;
+        }
+
+        for (let child of styleValueLayout.children) {
+            if (child === styleValuePlaceholder) {
+                if (!child.reference) continue;
+                child = child.reference;
+            }
+            if (child instanceof DirectionsMenuValue) {
+                let oldValue = Array.from(child.numberValues);
+                child.revalidate();
+                if (oldValue.length !== child.numberValues.length
+                    || !oldValue.every((value, index) => value === child.numberValues[index])) {
+                    child.numberValues = [child.min > 0 ? child.min : 0];
+                    delete macros.style[menuValueLayout.styleSelector][child.propName.toLowerCase()];
+                    child.revalidate();
+                    child.valid = false;
+                }
+            } else if (child instanceof IntMenuValue) {
+                let oldValue = child.numberValue;
+                child.revalidate();
+                if (oldValue !== child.numberValue) {
+                    child.numberValue = child.min > 0 ? child.min : 0
+                    delete macros.style[menuValueLayout.styleSelector][child.propName.toLowerCase()];
+                    child.revalidate();
+                    child.valid = false;
+                }
+            }
+        }
+        Utils.tooManyStyleDataRecursions(macros, menuValueLayout.styleData, menuValueLayout.styleSelector);
     }
 }

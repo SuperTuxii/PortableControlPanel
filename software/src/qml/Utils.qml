@@ -82,54 +82,60 @@ QtObject {
     }
     function macroPreprocessor(macros, text: string, currentStyleSelector: int): string {
         if (!macros) return text;
-        return text.replace(/\$[{(]([^)}:]+):?([^)}]*)[)}]/g, (_, key, modifierString) => {
-            key = key.toLowerCase();
-            let modifiers = {};
-            for (let modifier of modifierString.toLowerCase().split(",").map(modifier => modifier.split("="))) {
-                if (!modifier[0]) continue;
-                if (!modifier[1]) {
-                    modifiers[modifier[0]] = "";
-                    continue;
+        return text.replace(/^([^d%]*\d+)d%(.*)$/, "$1w%$2;$1h%$2")
+            .replace(/(\d+)([wh])?%/g, (_, digits, modifier) => {
+                if (!modifier)
+                    return `(${digits}/100)*($(w)+$(h))/2`;
+                return `(${digits}/100)*$(${modifier})`;
+            }).replace(/\$[{(]([^)}:]+):?([^)}]*)[)}]/g, (_, key, modifierString) => {
+                key = key.toLowerCase();
+                let modifiers = {};
+                for (let modifier of modifierString.toLowerCase().split(",").map(modifier => modifier.split("="))) {
+                    if (!modifier[0]) continue;
+                    if (!modifier[1]) {
+                        modifiers[modifier[0]] = "";
+                        continue;
+                    }
+                    if (modifier[0] === "s" || modifier[0] === "state" || modifier[0] === "p" || modifier[0] === "part")
+                        modifier[1] = modifier[1].charAt(0).toUpperCase() + modifier[1].substring(1);
+                    modifiers[modifier[0]] = modifier[1];
                 }
-                if (modifier[0] === "s" || modifier[0] === "state" || modifier[0] === "p" || modifier[0] === "part")
-                    modifier[1] = modifier[1].charAt(0).toUpperCase() + modifier[1].substring(1);
-                modifiers[modifier[0]] = modifier[1];
-            }
-            let styleSelector = currentStyleSelector;
-            if ("s" in modifiers || "state" in modifiers) {
-                let state = Connection.styleStateFromString("state" in modifiers ? modifiers.state : modifiers.s);
-                if (state !== -1)
-                    styleSelector = (styleSelector & 0xFF0000) | state;
-            }
-            if ("p" in modifiers || "part" in modifiers) {
-                let part = Connection.stylePartFromString("part" in modifiers ? modifiers.part : modifiers.p);
-                if (part !== -1)
-                    styleSelector = (styleSelector & 0xFFFF) | part;
-            }
-            if (key in macros) {
-                return macros[key];
-            } else if ("style" in macros && styleSelector in macros.style && key in macros.style[styleSelector]) {
-                let value = macros.style[styleSelector][key];
-                if (typeof value !== "string" && value.length) {
-                    if ("x" in modifiers || "0" in modifiers || "v" in modifiers || "vertical" in modifiers
-                        || "t" in modifiers || "top" in modifiers)
-                        return value[0];
-                    else if ("y" in modifiers || "1" in modifiers || "h" in modifiers || "horizontal" in modifiers
-                        || "r" in modifiers || "right" in modifiers)
-                        return value.length >= 2 ? value[1] : value[0];
-                    else if ("2" in modifiers || "b" in modifiers || "bottom" in modifiers)
-                        return value.length === 4 ? value[2] : value[0];
-                    else if ("3" in modifiers || "l" in modifiers || "left" in modifiers)
-                        return value.length === 4 ? value[3] : value.length === 2 ? value[1] : value[0];
-                    else
-                        return value[0];
+                let styleSelector = currentStyleSelector;
+                if ("s" in modifiers || "state" in modifiers) {
+                    let state = Connection.styleStateFromString("state" in modifiers ? modifiers.state : modifiers.s);
+                    if (state !== -1)
+                        styleSelector = (styleSelector & 0xFF0000) | state;
+                }
+                if ("p" in modifiers || "part" in modifiers) {
+                    let part = Connection.stylePartFromString("part" in modifiers ? modifiers.part : modifiers.p);
+                    if (part !== -1)
+                        styleSelector = (styleSelector & 0xFFFF) | part;
+                }
+                if (key in macros) {
+                    return macros[key];
+                } else if ("style" in macros && styleSelector in macros.style && key in macros.style[styleSelector]) {
+                    let value = macros.style[styleSelector][key];
+                    if (typeof value !== "string" && value.length) {
+                        if ("x" in modifiers || "0" in modifiers || "v" in modifiers || "vertical" in modifiers
+                            || "t" in modifiers || "top" in modifiers)
+                            return value[0];
+                        else if ("y" in modifiers || "1" in modifiers || "h" in modifiers || "horizontal" in modifiers
+                            || "r" in modifiers || "right" in modifiers)
+                            return value.length >= 2 ? value[1] : value[0];
+                        else if ("2" in modifiers || "b" in modifiers || "bottom" in modifiers)
+                            return value.length === 4 ? value[2] : value[0];
+                        else if ("3" in modifiers || "l" in modifiers || "left" in modifiers)
+                            return value.length === 4 ? value[3] : value.length === 2 ? value[1] : value[0];
+                        else
+                            return value[0];
+                    } else {
+                        return value;
+                    }
                 } else {
-                    return value;
+                    return "";
                 }
-            } else {
-                return "";
-            }
-        });
+            }).replace(/(\d+)°/g, "$1*10")
+            .replace(/(\d+)x/g, "$1*256");
     }
     function refreshStyleData(macros, allStyleData): boolean {
         for (let refreshes = 0; refreshes < 10; refreshes++) {

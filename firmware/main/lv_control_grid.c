@@ -835,7 +835,7 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
             break;
         case FontSizeScaled:
             lv_obj_set_style_text_font(object, &lv_font_montserrat_48, *styleSelector);
-            lv_obj_set_style_transform_scale(object, (value << 8) / 48, *styleSelector | LV_PART_ANY);
+            lv_obj_set_style_transform_scale(object, (value << 8) / 48, *styleSelector);
             lv_obj_remove_event_cb(object, alignPivotForScaleCB);
             lv_obj_add_event_cb(object, alignPivotForScaleCB, LV_EVENT_SIZE_CHANGED, NULL);
             alignPivotForScale(object, *styleSelector);
@@ -953,9 +953,13 @@ uint8_t *lv_control_grid_set_style(lv_control_grid_t *cg, const uint8_t index, c
         break;
     case FontMontserrat14:
         lv_obj_set_style_text_font(object, &lv_font_montserrat_14, *styleSelector);
+        lv_obj_set_style_transform_scale(object, 256, *styleSelector);
+        lv_obj_remove_event_cb(object, alignPivotForScaleCB);
         break;
     case FontMontserrat48:
         lv_obj_set_style_text_font(object, &lv_font_montserrat_48, *styleSelector);
+        lv_obj_set_style_transform_scale(object, 256, *styleSelector);
+        lv_obj_remove_event_cb(object, alignPivotForScaleCB);
         break;
     case ColorFilterUnset:
         lv_obj_set_style_color_filter_dsc(object, NULL, *styleSelector);

@@ -9,7 +9,8 @@ QtObject {
        if (Connection.styleKeyString(styleKey).endsWith("X")
            || styleKey === Connection.TransformWidth
            || styleKey === Connection.TranslateScale
-           || (styleKey >= Connection.BackgroundGradParams1 && styleKey <= Connection.BackgroundGradParams2))
+           || (styleKey >= Connection.BackgroundGradParams1 && styleKey <= Connection.BackgroundGradParams2)
+           || (styleKey >= Connection.Width && styleKey <= Connection.MaxWidth))
            return 2;
        return 0;
     }

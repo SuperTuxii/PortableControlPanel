@@ -71,10 +71,10 @@
     DropShadowOffsetX,\
     DropShadowOffsetY,\
     Width,\
-    MinWidth,\
-    MaxWidth,\
     Height,\
+    MinWidth,\
     MinHeight,\
+    MaxWidth,\
     MaxHeight,\
     Length,\
     X,\

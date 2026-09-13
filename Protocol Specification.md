@@ -19,6 +19,7 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 | 0x02    | Starts the Deep Sleep      |
 | 0x03    | Test Fill the Control Grid |
 | 0x04    | Clear the Control Grid     |
+| 0x05    | Reset all Screen Styles    |
 
 ### Only Operands Commands (0x40 - 0x7F)
 
@@ -30,6 +31,7 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 | 0x43    | Cell Index 1                  | Cell Index 2                       | Change the Widget at Cell Index 1 to span from Cell Index 1 to Cell Index 2 |
 | 0x44    | Cell Index                    | Sub Child Index (0 is main widget) | Remove the widget at the given Cell Index and Sub Child Index               |
 | 0x45    | Image Index                   | -                                  | Remove the image with the given index                                       |
+| 0x46    | Cell Index                    | Sub Child Index (0 is main widget) | Reset all Styles for the widget at the given Cell Index and Sub Child Index |
 
 ### Only Data Commands (0x80 - 0xBF)
 
@@ -38,17 +40,20 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 | 0x80    | Outer Padding (4 Bytes)  | Set the outer padding of the Control Grid           |
 | 0x81    | Row Padding (4 Bytes)    | Set the padding for the rows of the Control Grid    |
 | 0x82    | Column Padding (4 Bytes) | Set the padding for the columns of the Control Grid |
+| 0x83    | Style data               | Set the Style data of the Screen                    |
+| 0x84    | Style Selector (4 Bytes) | Reset Screen Style with the given Style Selector    |
 
 ### Operands and Data Commands (0xC0 - 0xFF)
 
 | Command | 1. Operand   | 2. Operand                             | Data                                            | Meaning                                                                                                              |
 | ------- | ------------ | -------------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | 0xC0    | Cell Index   | Sub Child Index (0 is main widget)     | Style data                                      | Set the Style data of the widget at the given Cell Index                                                             |
-| 0xC1    | Image Index  | Image Format                           | Width (2 Bytes) + Height (2 Bytes) + Image Data | Add a new image with the given index. If an image with the given index already exists then it will be removed first. |
-| 0xC2    | Image Index  | -                                      | Start Pixel Index (4 Bytes) + Image Data        | Start modifying image data for the given image index at the given pixel index.                                       |
-| 0xC3    | Cell Index 1 | Cell Index 2                           | Style data                                      | Create a Button from Cell Index 1 to Cell Index 2                                                                    |
-| 0xC4    | Cell Index   | Sub Child Index<br>(0 will create new) | Text<br>(Zero terminated) + Style Data          | Add/Set text as a sub widget to the widget at the given Cell Index                                                   |
-| 0xC5    | Cell Index   | Sub Child Index<br>(0 will create new) | Image Index<br>(1 Byte)<br>+ Style data         | Add/Set image as a sub widget to the widget at the given Cell Index                                                  |
+| 0xC1    | Cell Index   | Sub Child Index (0 is main widget)     | Style Selector (4 Bytes)                        | Reset the Style with the given Style Selector for the widget at the given Cell Index and Sub Child Index             |
+| 0xC2    | Image Index  | Image Format                           | Width (2 Bytes) + Height (2 Bytes) + Image Data | Add a new image with the given index. If an image with the given index already exists then it will be removed first. |
+| 0xC3    | Image Index  | -                                      | Start Pixel Index (4 Bytes) + Image Data        | Start modifying image data for the given image index at the given pixel index.                                       |
+| 0xC4    | Cell Index 1 | Cell Index 2                           | Style data                                      | Create a Button from Cell Index 1 to Cell Index 2                                                                    |
+| 0xC5    | Cell Index   | Sub Child Index<br>(0 will create new) | Text<br>(Zero terminated) + Style Data          | Add/Set text as a sub widget to the widget at the given Cell Index                                                   |
+| 0xC6    | Cell Index   | Sub Child Index<br>(0 will create new) | Image Index<br>(1 Byte)<br>+ Style data         | Add/Set image as a sub widget to the widget at the given Cell Index                                                  |
 
 ## Actions (Display to Configuration Software)
 ### No Operands and no Data Actions (0x00 - 0x3F)
@@ -57,9 +62,10 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 
 ### Only Data Actions (0x80 - 0xBF)
 
-| Command | Data | Meaning                                         |
-| ------- | ---- | ----------------------------------------------- |
-| 0x80    | Text | Protocol Information (Response to Command 0x00) |
+| Command | Data            | Meaning                                                                                                                           |
+| ------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 0x80    | Text            | Protocol Information (Response to Command 0x00)                                                                                   |
+| 0x81    | Part of Command | Confirmation that a command has been processed. The data of this action is the first few bytes of the command that were received. |
 
 ### Operands and Data Actions (0xC0 - 0xFF)
 

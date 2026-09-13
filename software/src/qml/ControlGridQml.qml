@@ -17,14 +17,15 @@ ControlGrid {
     Component.onCompleted: {
         displayPanel.transferRenderer(controlGrid);
         displayPanel.displaySizeRefreshed.connect(loadLayout);
-        Connection.tryConnect();
         loadLayout();
+        Connection.tryConnect();
     }
     onLayoutDataChanged: loadLayout
 
     function loadLayout(): void {
         setLayout(rows, columns);
         Connection.setLayout(rows, columns);
+        updateImages();
         settings.loadBlocks(layoutName, addBlock);
     }
 
@@ -40,32 +41,126 @@ ControlGrid {
         }
     }
 
+    function updateImages(row = -1, column = -1, data = undefined): void {
+        let images = new Set();
+        for (const block of layoutData.blocks) {
+            if (row - block.row >= 0 && row - block.row < block.rowSpan
+                && column - block.column >= 0 && column - block.column < block.columnSpan)
+                continue;
+            for (const styleSelector in block.style) {
+                for (const styleElement of block.style[styleSelector]) {
+                    if (styleElement.attrKey === Connection.BackgroundImageIndex && styleElement.value.imageKey.length > 1)
+                        images.add(styleElement.value.imageKey);
+                }
+            }
+            for (const subWidget of block.subWidgets) {
+                if (subWidget.type === "Image" && subWidget.image && subWidget.image.imageKey.length > 1)
+                    images.add(subWidget.image.imageKey);
+
+                for (const styleSelector in subWidget.style) {
+                    for (const styleElement of subWidget.style[styleSelector]) {
+                        if (styleElement.attrKey === Connection.BackgroundImageIndex && styleElement.value.imageKey.length > 1)
+                            images.add(styleElement.value.imageKey);
+                    }
+                }
+            }
+        }
+        if (data) {
+            for (const styleSelector in data.style) {
+                for (const styleElement of data.style[styleSelector]) {
+                    if (styleElement.attrKey === Connection.BackgroundImageIndex && styleElement.value.imageKey.length > 1)
+                        images.add(styleElement.value.imageKey);
+                }
+            }
+            for (const subWidget of data.subWidgets) {
+                if (subWidget.type === "Image" && subWidget.image && subWidget.image.imageKey.length > 1)
+                    images.add(subWidget.image.imageKey);
+                for (const styleSelector in subWidget.style) {
+                    for (const styleElement of subWidget.style[styleSelector]) {
+                        if (styleElement.attrKey === Connection.BackgroundImageIndex && styleElement.value.imageKey.length > 1)
+                            images.add(styleElement.value.imageKey);
+                    }
+                }
+            }
+        }
+        loadImages(Array.from(images));
+        Connection.loadImages(Array.from(images));
+    }
+    function updateMacros(index: int, data, onMainChanged, onSubWidgetsChanged): void {
+        let sizePosData = { index: index };
+        controlGrid.insertCoordsData(sizePosData);
+        const mainMacros = {};
+        Utils.buildMacros(
+            mainMacros, data.style,
+            sizePosData.width, sizePosData.height,
+            data.row, data.column,
+            data.rowSpan, data.columnSpan
+        );
+        if (Utils.refreshStyleData(mainMacros, data.style))
+            onMainChanged();
+        let changed = false;
+        for (let i = 0; i < data.subWidgets.length; i++) {
+            const subWidget = data.subWidgets[i];
+            let subSizePosData = { index: index, subIndex: i+1 };
+            controlGrid.insertCoordsData(subSizePosData);
+            const subMacros = {};
+            Utils.buildMacros(
+                subMacros, subWidget.style,
+                subSizePosData.width, subSizePosData.height,
+                data.row, data.column,
+                data.rowSpan, data.columnSpan
+            );
+            subMacros.parent = mainMacros;
+            if (Utils.refreshSubWidget(subMacros, subWidget)) {
+                if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+                const subIndex = controlGrid.subWidget(subWidget.type, index, i+1, subWidget);
+                if (subIndex !== i+1) return false;
+                changed = true;
+            }
+        }
+        if (changed)
+            onSubWidgetsChanged();
+    }
     function addBlock(data): boolean {
         let index = (data.row * columns) + data.column;
         let index2 = index + (data.columnSpan-1) + ((data.rowSpan-1) * columns);
         if (!addWidget(data.type, index, index2))
             return false;
+        for (let i = 0; i < data.subWidgets.length; i++) {
+            const subWidget = data.subWidgets[i];
+            if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+            const subIndex = controlGrid.subWidget(subWidget.type, index, 0, subWidget);
+            if (subIndex !== i+1) return false;
+        }
 
-        let sizePosData = { index: index };
-        insertCoordsData(sizePosData);
-        const macros = {};
-        Utils.buildMacros(
-            macros, data.style,
-            sizePosData.width, sizePosData.height,
-            data.row, data.column,
-            data.rowSpan, data.columnSpan
+        updateMacros(
+            index, data,
+            () => settings.editBlock(layoutName, data.row, data.column, { style: data.style }),
+            () => settings.editBlock(layoutName, data.row, data.column, { subWidgets: data.subWidgets })
         );
-        if (Utils.refreshStyleData(macros, data.style))
-            settings.editBlock(layoutName, data.row, data.column, { style: data.style });
 
         for (const styleSelector in data.style) {
             setStyle(index, 0, styleSelector, data.style[styleSelector]);
         }
         Connection.addWidget(data.type, index, index2, data.style);
+        for (let i = 0; i < data.subWidgets.length; i++) {
+            const subWidget = data.subWidgets[i];
+            if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+            const subIndex = i + 1;
+            for (const styleSelector in subWidget.style) {
+                setStyle(index, subIndex, styleSelector, subWidget.style[styleSelector]);
+            }
+            Connection.subWidget(subWidget.type, index, subIndex, true, subWidget);
+        }
         return true;
     }
 
-    function startDrag(row, column): void {
+    function removeWidget(index: int, subIndex: int): void {
+        remove(index, subIndex);
+        Connection.remove(index, subIndex);
+    }
+
+    function startDrag(row: int, column: int): void {
         let block = findBlock(row, column);
         dragTarget.index = (columns * block.row) + block.column
         dragTarget.row = block.row;
@@ -98,51 +193,55 @@ ControlGrid {
     function endDrag(): void {
         let block = findBlock(Math.floor(dragTarget.index / columns), dragTarget.index % columns);
         let toIndex = (dragTarget.row * columns) + dragTarget.column;
-        if (toIndex !== dragTarget.index)
-            controlGrid.move(dragTarget.index, toIndex);
+        let reloadRequired = false;
         if (dragTarget.rowSpan !== block.rowSpan || dragTarget.columnSpan !== block.columnSpan)
-            controlGrid.changeSize(toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1));
+            reloadRequired = true;
         let data = {
             row: dragTarget.row,
             column: dragTarget.column,
             rowSpan: dragTarget.rowSpan,
             columnSpan: dragTarget.columnSpan,
         }
-        let sizePosData = { index: toIndex };
-        insertCoordsData(sizePosData);
-        const macros = {};
-        Utils.buildMacros(
-            macros, block.style,
-            sizePosData.width, sizePosData.height,
-            dragTarget.row, dragTarget.row,
-            dragTarget.rowSpan, dragTarget.columnSpan
-        );
-        if (Utils.refreshStyleData(macros, block.style)) {
-            data.style = block.style;
-            remove((data.row * columns) + data.column, 0);
-            addWidget(block.type, toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1));
-            for (const styleSelector in data.style) {
-                setStyle(toIndex, 0, styleSelector, data.style[styleSelector]);
+        controlGrid.remove(dragTarget.index, 0);
+        controlGrid.addWidget(block.type, toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1));
+        for (let i = 0; i < block.subWidgets.length; i++) {
+            const subWidget = block.subWidgets[i];
+            if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+            const subIndex = controlGrid.subWidget(subWidget.type, toIndex, 0, subWidget);
+            if (subIndex !== i+1) break;
+        }
+
+        updateMacros(
+            toIndex, block,
+            () => {
+                data.style = block.style;
+                reloadRequired = true;
+            },
+            () => {
+                data.subWidgets = block.subWidgets;
+                reloadRequired = true;
             }
+        );
+
+        for (const styleSelector in block.style)
+            controlGrid.setStyle(toIndex, 0, styleSelector, block.style[styleSelector]);
+        for (let i = 0; i < block.subWidgets.length; i++) {
+            const subWidget = block.subWidgets[i];
+            if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+            const subIndex = i + 1;
+            for (const styleSelector in subWidget.style)
+                setStyle(toIndex, subIndex, styleSelector, subWidget.style[styleSelector]);
+        }
+
+        if (reloadRequired) {
             Connection.remove(dragTarget.index, 0);
-            Connection.addWidget(block.type, toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1), data.style);
+            Connection.addWidget(block.type, toIndex, toIndex + ((dragTarget.rowSpan - 1) * columns) + (dragTarget.columnSpan - 1), block.style);
+            for (let i = 0; i < block.subWidgets.length; i++) {
+                const subWidget = block.subWidgets[i];
+                if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+                Connection.subWidget(subWidget.type, toIndex, i+1, true, subWidget);
+            }
         } else {
-            if (0 in block.style)
-                controlGrid.setStyle(toIndex, 0, Connection.PartMain, [
-                    {
-                        attrKey: Connection.TranslateX,
-                        value: (block.style[0].find((style) => style.attrKey === Connection.TranslateX) ?? {value: [0, 0]}).value
-                    },
-                    {
-                        attrKey: Connection.TransformWidth,
-                        value: (block.style[0].find((style) => style.attrKey === Connection.TransformWidth) ?? {value: [0, 0]}).value
-                    }
-                ]);
-            else
-                controlGrid.setStyle(toIndex, 0, Connection.PartMain, [
-                    {attrKey: Connection.TranslateX, value: [0, 0]},
-                    {attrKey: Connection.TransformWidth, value: [0, 0]}
-                ]);
             if (toIndex !== dragTarget.index)
                 Connection.move(dragTarget.index, toIndex);
             if (dragTarget.rowSpan !== block.rowSpan || dragTarget.columnSpan !== block.columnSpan)
@@ -150,4 +249,5 @@ ControlGrid {
         }
         settings.editBlock(layoutName, block.row, block.column, data);
     }
+
 }

@@ -26,6 +26,10 @@ file(GLOB menu_values
         RELATIVE ${PROJECT_SOURCE_DIR}
         "src/qml/menuValues/*.qml"
 )
+file(GLOB sub_widget_values
+        RELATIVE ${PROJECT_SOURCE_DIR}
+        "src/qml/subWidgetValues/*.qml"
+)
 file(GLOB source_files
         RELATIVE ${PROJECT_SOURCE_DIR}
         "src/cpp/*.h"
@@ -58,7 +62,7 @@ set_source_files_properties(src/qml/Theme.qml src/qml/Utils.qml
 qt_add_qml_module(ControlPanelSoftwareApp
     URI ControlPanelSoftware
     QML_FILES
-        ${qml_files} ${menu_values} ${toastify_files}
+        ${qml_files} ${menu_values} ${sub_widget_values} ${toastify_files}
     SOURCES
         ${source_files}
 )

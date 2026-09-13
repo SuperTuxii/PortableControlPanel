@@ -18,7 +18,7 @@
 #include "lv_control_grid.h"
 #include "display_driver.h"
 #include "protocol.h"
-#include "tinyusb_console.h"
+//#include "tinyusb_console.h"
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define ALIGN_DOWN(num, align)  ((num) & ~((align) - 1))
@@ -72,7 +72,7 @@ static esp_err_t lvgl_init() {
     };
     lv_indev_t* touch_handle = lvgl_port_add_touch(&touch_cfg);
 
-    ESP_LOGI(LVGL_TAG, "Aquire lvgl port lock");
+    ESP_LOGI(LVGL_TAG, "Acquire lvgl port lock");
     if (lvgl_port_lock(0)) {
         ESP_LOGI(LVGL_TAG, "Add LVGL widgets");
         lv_control_grid_create(lv_screen_active());
@@ -81,7 +81,7 @@ static esp_err_t lvgl_init() {
     return ESP_OK;
 }
 
-static void tinyusb_cdc_rx_callback(int itf, cdcacm_event_t *event) {
+static void tinyusb_cdc_rx_callback(const int itf, cdcacm_event_t *event) {
     if (itf != TINYUSB_PROTOCOL_PORT)
         return;
     tinyusbReadReady();
@@ -92,19 +92,19 @@ static esp_err_t tinyusb_init() {
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
-    tinyusb_config_cdcacm_t acm_cfg = {
+    const tinyusb_config_cdcacm_t acm_cfg = {
         .cdc_port = TINYUSB_PROTOCOL_PORT,
         .callback_rx = &tinyusb_cdc_rx_callback,
-        .callback_rx_wanted_char = NULL,
-        .callback_line_state_changed = NULL,
-        .callback_line_coding_changed = NULL
+        .callback_rx_wanted_char = nullptr,
+        .callback_line_state_changed = nullptr,
+        .callback_line_coding_changed = nullptr
     };
     ESP_ERROR_CHECK(tinyusb_cdcacm_init(&acm_cfg));
     //ESP_ERROR_CHECK(tinyusb_console_init(TINYUSB_CDC_ACM_0));
     return ESP_OK;
 }
 
-void app_main(void) {
+void app_main() {
     // Initialize display and LVGL
     ESP_ERROR_CHECK(display_brightness_init());
     ESP_ERROR_CHECK(display_backlight_on());
@@ -113,40 +113,4 @@ void app_main(void) {
     ESP_ERROR_CHECK(lvgl_init());
     // Initialize TinyUSB (route console output to high speed usb)
     ESP_ERROR_CHECK(tinyusb_init());
-
-    // printf("Hello world!\n");
-    //
-    // /* Print chip information */
-    // esp_chip_info_t chip_info;
-    // uint32_t flash_size;
-    // esp_chip_info(&chip_info);
-    // printf("This is %s chip with %d CPU core(s), %s%s%s%s, ",
-    //        CONFIG_IDF_TARGET,
-    //        chip_info.cores,
-    //        (chip_info.features & CHIP_FEATURE_WIFI_BGN) ? "WiFi/" : "",
-    //        (chip_info.features & CHIP_FEATURE_BT) ? "BT" : "",
-    //        (chip_info.features & CHIP_FEATURE_BLE) ? "BLE" : "",
-    //        (chip_info.features & CHIP_FEATURE_IEEE802154) ? ", 802.15.4 (Zigbee/Thread)" : "");
-    //
-    // unsigned major_rev = chip_info.revision / 100;
-    // unsigned minor_rev = chip_info.revision % 100;
-    // printf("silicon revision v%d.%d, ", major_rev, minor_rev);
-    // if(esp_flash_get_size(NULL, &flash_size) != ESP_OK) {
-    //     printf("Get flash size failed");
-    //     return;
-    // }
-    //
-    // printf("%" PRIu32 "MB %s flash\n", flash_size / (uint32_t)(1024 * 1024),
-    //        (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
-    //
-    // printf("Minimum free heap size: %" PRIu32 " bytes\n", esp_get_minimum_free_heap_size());
-    //
-    // for (int i = 10; i >= 0; i--) {
-    //     printf("Restarting in %d seconds...\n", i);
-    //     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    // }
-    // printf("Restarting now.\n");
-    // fflush(stdout);
-    // display_backlight_off();
-    // esp_restart();
 }

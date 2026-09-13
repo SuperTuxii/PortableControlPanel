@@ -128,15 +128,29 @@ tinyusb_read_error:
     }
 }
 
-void handleStyleData(uint8_t index, uint8_t subIndex, uint8_t* data, uint8_t dataLength) {
+void handleStyleData(const uint8_t index, const uint8_t subIndex, uint8_t* data, const uint8_t dataLength) {
     lv_style_selector_t styleSelector = 0;
+    lv_style_t *style = nullptr;
     uint8_t *end = data + dataLength;
     while (data <= end) {
-        data = lv_control_grid_set_style(cg_act, index, subIndex, &styleSelector, data, end);
+        data = lv_control_grid_set_style(cg_act, index, subIndex, &style, &styleSelector, data, end);
     }
 }
 
-void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* data, uint8_t dataLength) {
+void handleScreenStyleData(uint8_t* data, const uint8_t dataLength) {
+    lv_obj_t *screen = lv_screen_active();
+    lv_style_selector_t styleSelector = 0;
+    lv_style_t *style = getStyleData(screen, styleSelector, true);
+    uint8_t *end = data + dataLength;
+    while (data <= end) {
+        data = handle_style_data(cg_act, screen, &style, &styleSelector, data, end);
+    }
+    lv_obj_refresh_style(screen, lv_obj_style_get_selector_part(styleSelector), LV_STYLE_PROP_ANY);
+    if (data == end + 2)
+        ESP_LOGE(COMMS_TAG, "Couldn't set style for screen (valueLength: %ld)", end - data);
+}
+
+void handleCommand(const uint8_t cmd, const uint8_t operand1, const uint8_t operand2, uint8_t* data, const uint8_t dataLength) {
 #if ECHO_COMMAND
     ESP_LOGI(COMMS_TAG, "Received Command %02X with Operands %02X & %02X and %d Bytes of additional Data", cmd, operand1, operand2, (cmd & (1 << 7)) > 1 ? dataLength + 1 : 0);
     if ((cmd & (1 << 7)) > 1) {
@@ -151,8 +165,8 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
         switch (cmd) {
         case PrintProtocolInfoCMD:
             writeBuffer[0] = ProtocolInfoACT;
-            lv_obj_t *screen = lv_screen_active();
-            int textLength = sprintf((char *) writeBuffer + 2, "ControlPanelFirmware v%s %ldx%ld", PROTOCOL_VERSION, lv_obj_get_width(screen), lv_obj_get_height(screen));
+            const lv_obj_t *screen = lv_screen_active();
+            const int textLength = sprintf((char *) writeBuffer + 2, "ControlPanelFirmware v%s %ldx%ld", PROTOCOL_VERSION, lv_obj_get_width(screen), lv_obj_get_height(screen));
             if (textLength < 0 || textLength > UINT8_MAX) {
                 ESP_LOGE(COMMS_TAG, "Protocol Information Text has an invalid size: %d", textLength);
                 return;
@@ -181,8 +195,19 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                 lvgl_port_unlock();
             }
             break;
+        case ResetScreenStylesCMD:
+            if (lvgl_port_lock(0)) {
+                removeStyles(lv_screen_active());
+                lvgl_port_unlock();
+            }
+            break;
         default: goto undefinedCommandError;
         }
+        writeBuffer[0] = CmdConfirmationACT;
+        writeBuffer[1] = 0;
+        writeBuffer[2] = cmd;
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, 3);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
     } else if ((cmd >> 6) == 1) { // Only operands
         switch (cmd) {
         case SetBacklightBrightnessCMD:
@@ -218,8 +243,21 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                 lvgl_port_unlock();
             }
             break;
+        case ResetStylesCMD:
+            if (lvgl_port_lock(0)) {
+                lv_control_grid_remove_styles(cg_act, operand1, operand2);
+                lvgl_port_unlock();
+            }
+            break;
         default: goto undefinedCommandError;
         }
+        writeBuffer[0] = CmdConfirmationACT;
+        writeBuffer[1] = 2;
+        writeBuffer[2] = cmd;
+        writeBuffer[3] = operand1;
+        writeBuffer[4] = operand2;
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, 5);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
     } else if ((cmd >> 6) == 2) { // Only data
         switch (cmd) {
         case SetOuterPadCMD:
@@ -240,13 +278,38 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                 lvgl_port_unlock();
             }
             break;
+        case SetScreenStyleCMD:
+            if (lvgl_port_lock(0)) {
+                handleScreenStyleData(data, dataLength);
+                lvgl_port_unlock();
+            }
+            break;
+        case ResetScreenStyleCMD:
+            if (dataLength == 3 && lvgl_port_lock(0)) {
+                removeStyle(lv_screen_active(), convertDataToInt32(data));
+                lvgl_port_unlock();
+            }
+            break;
         default: goto undefinedCommandError;
         }
+        writeBuffer[0] = CmdConfirmationACT;
+        writeBuffer[1] = dataLength > 15 ? 17 : dataLength;
+        writeBuffer[2] = cmd;
+        writeBuffer[3] = dataLength;
+        memcpy(writeBuffer + 4, data, dataLength > 15 ? 16 : dataLength+1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, writeBuffer[1] + 3);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
     } else { // Operands and data
         switch (cmd) {
         case SetStyleDataCMD:
             if (lvgl_port_lock(0)) {
                 handleStyleData(operand1, operand2, data, dataLength);
+                lvgl_port_unlock();
+            }
+            break;
+        case ResetStyleCMD:
+            if (dataLength == 3 && lvgl_port_lock(0)) {
+                lv_control_grid_remove_style(cg_act, operand1, operand2, convertDataToInt32(data));
                 lvgl_port_unlock();
             }
             break;
@@ -271,7 +334,7 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
             break;
         case SubTextCMD:
             if (lvgl_port_lock(0)) {
-                uint8_t *end = data + dataLength;
+                const uint8_t *end = data + dataLength;
                 uint8_t *styleData = data;
                 while (*styleData != 0 && styleData < end)
                     styleData++;
@@ -280,23 +343,32 @@ void handleCommand(uint8_t cmd, uint8_t operand1, uint8_t operand2, uint8_t* dat
                     return;
                 }
                 styleData++;
-                operand2 = lv_control_grid_text(cg_act, operand1, operand2, data, end);
-                if (operand2 != 0) {
-                    handleStyleData(operand1, operand2, styleData, dataLength - (styleData - data));
+                const uint8_t subIndex = lv_control_grid_text(cg_act, operand1, operand2, data, end);
+                if (subIndex != 0) {
+                    handleStyleData(operand1, subIndex, styleData, dataLength - (styleData - data));
                 }
                 lvgl_port_unlock();
             }
             break;
         case SubImageCMD:
             if (lvgl_port_lock(0)) {
-                operand2 = lv_control_grid_image(cg_act, operand1, operand2, data, data + dataLength);
-                if (operand2 != 0 && dataLength != 0)
-                    handleStyleData(operand1, operand2, data + 1, dataLength - 1);
+                const uint8_t subIndex = lv_control_grid_image(cg_act, operand1, operand2, data, data + dataLength);
+                if (subIndex != 0 && dataLength != 0)
+                    handleStyleData(operand1, subIndex, data + 1, dataLength - 1);
                 lvgl_port_unlock();
             }
             break;
         default: goto undefinedCommandError;
         }
+        writeBuffer[0] = CmdConfirmationACT;
+        writeBuffer[1] = dataLength > 15 ? 17 : dataLength;
+        writeBuffer[2] = cmd;
+        writeBuffer[3] = operand1;
+        writeBuffer[4] = operand2;
+        writeBuffer[5] = dataLength;
+        memcpy(writeBuffer + 6, data, dataLength > 15 ? 16 : dataLength+1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, writeBuffer[1] + 3);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
     }
     return;
 undefinedCommandError:

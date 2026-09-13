@@ -14,9 +14,9 @@ static const char *BACKLIGHT_TAG = "st7701_backlight";
 static const char *DISPLAY_TAG = "st7701_display";
 static const char *TOUCH_TAG = "gt911_touch";
 
-static esp_lcd_panel_io_handle_t mipi_dbi_io = NULL;
-static esp_lcd_panel_handle_t panel_handle = NULL;
-static esp_lcd_touch_handle_t tp_handle = NULL;
+static esp_lcd_panel_io_handle_t mipi_dbi_io = nullptr;
+static esp_lcd_panel_handle_t panel_handle = nullptr;
+static esp_lcd_touch_handle_t tp_handle = nullptr;
 
 esp_err_t display_brightness_init() {
     ESP_LOGI(BACKLIGHT_TAG, "Initialize LCD backlight LED Control");
@@ -43,7 +43,7 @@ esp_err_t display_brightness_init() {
 
 esp_err_t display_init() {
     ESP_LOGI(DISPLAY_TAG, "MIPI DSI PHY Powered on");
-    static esp_ldo_channel_handle_t ldo_mipi_phy = NULL;
+    static esp_ldo_channel_handle_t ldo_mipi_phy = nullptr;
 
     esp_ldo_channel_config_t ldo_mipi_phy_config = {
         .chan_id = MIPI_DSI_PHY_PWR_LDO_CHAN,
@@ -52,7 +52,7 @@ esp_err_t display_init() {
     ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
 
     ESP_LOGI(DISPLAY_TAG, "Initialize MIPI DSI bus");
-    static esp_lcd_dsi_bus_handle_t mipi_dsi_bus = NULL;
+    static esp_lcd_dsi_bus_handle_t mipi_dsi_bus = nullptr;
     esp_lcd_dsi_bus_config_t bus_config = {
         .bus_id = 0,
         .num_data_lanes = MIPI_DSI_LANE_NUM,
@@ -97,7 +97,7 @@ esp_err_t display_init() {
 
 esp_err_t touch_init() {
     ESP_LOGI(TOUCH_TAG, "Initialize I2C bus");
-    i2c_master_bus_handle_t i2c_handle = NULL;
+    i2c_master_bus_handle_t i2c_handle = nullptr;
     i2c_master_bus_config_t i2c_bus_conf = {
         .clk_source = I2C_CLK_SRC_DEFAULT,
         .sda_io_num = TOUCH_I2C_SDA,
@@ -107,7 +107,7 @@ esp_err_t touch_init() {
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_conf, &i2c_handle));
 
     ESP_LOGI(TOUCH_TAG, "Install panel IO");
-    esp_lcd_panel_io_handle_t tp_io_handle = NULL;
+    esp_lcd_panel_io_handle_t tp_io_handle = nullptr;
     esp_lcd_panel_io_i2c_config_t tp_io_config = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
     tp_io_config.scl_speed_hz = 100000;
     ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(i2c_handle, &tp_io_config, &tp_io_handle));

@@ -1,12 +1,10 @@
 #ifndef CONTROLPANELSOFTWARE_CONTROLGRID_H
 #define CONTROLPANELSOFTWARE_CONTROLGRID_H
+#include <QDir>
 #include <QObject>
 #include <qqmlintegration.h>
-
-#include "src/LvglRenderer.h"
-extern "C" {
 #include "lv_control_grid.h"
-}
+#include "src/LvglRenderer.h"
 
 class ControlGrid : public QObject {
     Q_OBJECT
@@ -19,16 +17,17 @@ class ControlGrid : public QObject {
     Q_PROPERTY(int32_t outerPad READ getOuterPad WRITE setOuterPad NOTIFY outerPadChanged)
     Q_PROPERTY(int32_t rowPad READ getRowPad WRITE setRowPad NOTIFY rowPadChanged)
     Q_PROPERTY(int32_t columnPad READ getColumnPad WRITE setColumnPad NOTIFY columnPadChanged)
-private:
+
     LvglRenderer *lvglRenderer;
     lv_control_grid_t *controlGrid;
+    QString loadedImages[256];
 
     void reinitControlGrid();
 public:
     explicit ControlGrid(QObject *parent = nullptr);
     ~ControlGrid() override;
 
-    static bool parseStyleElement(const QJSValue &styleElement, uint8_t *&buffer, const uint8_t *bufferEnd, int &part);
+    static bool parseStyleElement(const QVariant &styleElement, uint8_t *&buffer, const uint8_t *bufferEnd, int &part);
 
     [[nodiscard]] LvglRenderer* getLvglRenderer() const { return lvglRenderer; }
     [[nodiscard]] int32_t getCGWidth() const;
@@ -58,18 +57,35 @@ public:
     void setRowPad(int32_t pad);
     void setColumnPad(int32_t pad);
 public slots:
+    void setScreenStyle(lv_style_selector_t styleSelector, const QJSValue& data);
+    void removeScreenStyle(lv_style_selector_t styleSelector) const;
+    void removeScreenStyles() const;
     void setLayout(int rows, int columns);
     void testFill() const;
-    void clear() const;
+    void clear();
     void move(uint8_t fromIndex, uint8_t toIndex) const;
     void changeSize(uint8_t index, uint8_t index2) const;
     void remove(uint8_t index, uint8_t subIndex) const;
-    // TODO: Add Image Methods
+    int16_t findImage(const QString& key) const;
+    int16_t loadImage(const QString& key, int16_t index = -1);
+    void loadImages(const QSet<QString>& data);
+    void loadImages(QStringList data) {
+        loadImages(QSet(data.begin(), data.end()));
+    }
+    void removeUnusedImages(const QSet<QString>& data);
+    void removeUnusedImages(QStringList data) {
+        removeUnusedImages(QSet(data.begin(), data.end()));
+    }
+    void removeImage(const QString& key);
+    void clearImages();
     bool addWidget(const QString& type, uint8_t index, uint8_t index2) const;
     bool addButton(uint8_t index, uint8_t index2) const;
-    void subText(uint8_t index, uint8_t subIndex, const QString& text) const;
-    void subImage(uint8_t index, uint8_t subIndex, uint8_t imageIndex) const;
-    void setStyle(uint8_t index, uint8_t subIndex, lv_style_selector_t styleSelector, const QJSValue& data) const;
+    uint8_t subWidget(const QString& type, uint8_t index, uint8_t subIndex, const QJSValue& data);
+    uint8_t subText(uint8_t index, uint8_t subIndex, const QString& text) const;
+    uint8_t subImage(uint8_t index, uint8_t subIndex, const QString& key);
+    void setStyle(uint8_t index, uint8_t subIndex, lv_style_selector_t styleSelector, const QJSValue& data);
+    void removeStyle(uint8_t index, uint8_t subIndex, lv_style_selector_t styleSelector) const;
+    void removeStyles(uint8_t index, uint8_t subIndex) const;
 
     void insertCoordsData(QJSValue data) const;
 signals:

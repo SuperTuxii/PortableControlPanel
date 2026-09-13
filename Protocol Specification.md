@@ -38,6 +38,7 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 | 0x80    | Outer Padding (4 Bytes)  | Set the outer padding of the Control Grid           |
 | 0x81    | Row Padding (4 Bytes)    | Set the padding for the rows of the Control Grid    |
 | 0x82    | Column Padding (4 Bytes) | Set the padding for the columns of the Control Grid |
+| 0x83    | Style data               | Set the Style data of the Screen                    |
 
 ### Operands and Data Commands (0xC0 - 0xFF)
 
@@ -57,9 +58,10 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 
 ### Only Data Actions (0x80 - 0xBF)
 
-| Command | Data | Meaning                                         |
-| ------- | ---- | ----------------------------------------------- |
-| 0x80    | Text | Protocol Information (Response to Command 0x00) |
+| Command | Data            | Meaning                                                                                                                           |
+| ------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 0x80    | Text            | Protocol Information (Response to Command 0x00)                                                                                   |
+| 0x81    | Part of Command | Confirmation that a command has been processed. The data of this action is the first few bytes of the command that were received. |
 
 ### Operands and Data Actions (0xC0 - 0xFF)
 

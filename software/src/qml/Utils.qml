@@ -1,8 +1,11 @@
 pragma Singleton
 
+import QtCore
 import QtQuick
 
 QtObject {
+    property Settings settings
+
     function getStyleKeyDirections(styleKey: int): int {
        if (styleKey === Connection.PadAll || styleKey === Connection.MarginAll)
            return 4;
@@ -69,17 +72,31 @@ QtObject {
         macros.cs = columnSpan;
         macros.columnspan = columnSpan;
     }
+    function buildSelectStyleMacros(selectStyleMacros, selectStyleData) {
+        for (const styleData of selectStyleData) {
+            if (typeof styleData.value === "number")
+                selectStyleMacros[styleData.name.toLowerCase()] = styleData.value;
+            else if (styleData.value.length && typeof styleData.value !== "string")
+                selectStyleMacros[styleData.name.toLowerCase()] = styleData.value.length === 1 ? styleData.value[0] : styleData.value;
+        }
+    }
     function buildStyleMacros(macros, allStyleData) {
         macros.style = {};
         for (const styleSelector in allStyleData) {
             macros.style[styleSelector] = {};
-            for (let styleData of allStyleData[styleSelector]) {
-                if (typeof styleData.value === "number")
-                    macros.style[styleSelector][styleData.name.toLowerCase()] = styleData.value;
-                else if (styleData.value.length && typeof styleData.value !== "string")
-                    macros.style[styleSelector][styleData.name.toLowerCase()] = styleData.value.length === 1 ? styleData.value[0] : styleData.value;
-            }
+            buildSelectStyleMacros(macros.style[styleSelector], allStyleData[styleSelector])
         }
+    }
+    function combineSizeMacros(macros, width: int, height: int): variant {
+        if (!macros) return { w: width, width: width, h: height, height: height };
+        const widgetWidth = "parent" in macros ? macros.parent.w : macros.w;
+        const widgetHeight = "parent" in macros ? macros.parent.h : macros.h;
+        return Object.assign({}, macros, {
+            w: width, width: width, h: height, height: height,
+            widget: [widgetWidth, widgetHeight],
+            ww: widgetWidth, wwidth: widgetWidth,
+            wh: widgetHeight, wheight: widgetHeight
+        });
     }
     function macroPreprocessor(macros, text: string, currentStyleSelector: int, isDirection = false): string {
         if (!macros) return text;
@@ -155,13 +172,78 @@ QtObject {
         tooManyStyleDataRecursions(macros, allStyleData);
         return true;
     }
+    function refreshSubWidget(macros, subWidget): boolean {
+        let changed = false;
+        if ("style" in subWidget)
+            changed |= refreshStyleData(macros, subWidget.style);
+        if (subWidget.type === "Image" && subWidget.image && subWidget.image.imageKey)
+            changed |= refreshImageValue(macros, subWidget.image, 0);
+        return changed;
+    }
+    function refreshImageValue(macros, image, styleSelector): boolean {
+        const imageData = settings.loadImage(image.key);
+        if ("cropSizeText" in image) {
+            const newValue = parseDirectionsCalc(
+                macroPreprocessor(
+                    Utils.combineSizeMacros(
+                        macros,
+                        imageData.initialSize[0],
+                        imageData.initialSize[1]
+                    ),
+                    image.cropSizeText, styleSelector, true
+                ),
+                2, 1, Math.max(imageData.initialSize[0], imageData.initialSize[1])
+            );
+            if (newValue !== undefined)
+                image.cropSize = newValue;
+        }
+        const cropSize = image.cropSize ?? imageData.cropSize;
+        const cropWidth = cropSize[0];
+        const cropHeight = cropSize.length === 2 ? cropSize[1] : cropSize[0];
+        if ("cropPosText" in image) {
+            const newValue = parseDirectionsCalc(
+                macroPreprocessor(
+                    Utils.combineSizeMacros(
+                        macros,
+                        imageData.initialSize[0] - cropWidth,
+                        imageData.initialSize[1] - cropHeight
+                    ),
+                    image.cropPosText, styleSelector, true
+                ),
+                2, 0, Math.max(imageData.initialSize[0], imageData.initialSize[1])
+            );
+            if (newValue !== undefined)
+                image.cropPos = newValue;
+        }
+        if ("resizeText" in image) {
+            const newValue = parseDirectionsCalc(
+                macroPreprocessor(
+                    Utils.combineSizeMacros(
+                        macros,
+                        cropWidth,
+                        cropHeight
+                    ),
+                    image.resizeText, styleSelector, true
+                ),
+                2, 1, Math.max(imageData.initialSize[0], imageData.initialSize[1], 1000)
+            );
+            if (newValue !== undefined)
+                image.resize = newValue;
+        }
+        const newImageKey = createDefaultedImageKey(image, imageData);
+        if (newImageKey !== image.imageKey) {
+            image.imageKey = newImageKey;
+            return true;
+        }
+        return false;
+    }
     function refreshStyleDataSingle(macros, allStyleData, exceptStyleSelector = -1): boolean {
         let changed = false;
         for (let styleSelector in allStyleData) {
             styleSelector = parseInt(styleSelector);
             if (styleSelector === exceptStyleSelector) continue;
             for (const styleData of allStyleData[styleSelector]) {
-                if (!("text" in styleData)) continue;
+                if (!("text" in styleData) && !(typeof styleData.value === "object" && "imageKey" in styleData.value)) continue;
                 if (typeof styleData.value === "number") {
                     const newValue = parseIntCalc(
                         macroPreprocessor(macros, styleData.text, styleSelector),
@@ -188,6 +270,8 @@ QtObject {
                         styleData.value = newValue.length === 1 ? newValue[0] : newValue;
                         changed = true;
                     }
+                } else if (typeof styleData.value === "object" && "imageKey" in styleData.value) {
+                    changed |= refreshImageValue(macros, styleData.value, styleSelector);
                 }
             }
         }
@@ -228,5 +312,48 @@ QtObject {
                 }
             }
         }
+    }
+
+    function createImageKey(data: variant, allowedAttrs): string {
+        return createDefaultedImageKey(data, Object(), allowedAttrs);
+    }
+
+    function createDefaultedImageKey(data: variant, imageData = Object(), allowedAttrs = ["cropPos", "cropSize", "resize", "colorFormat"]): string {
+        let attributes = [];
+        for (const key of new Set(allowedAttrs)) {
+            const value = data[key] ?? imageData[key];
+            if (!value) continue;
+            if (typeof value === "object" && value.length)
+                if (value.every(val => value[0] === val))
+                    attributes.push(`${key}=${value[0]}`);
+                else
+                    attributes.push(`${key}=${value.join(";")}`);
+            else
+                attributes.push(`${key}=${value}`);
+        }
+        return `${data.image ?? data.key}?${attributes.join(",")}`;
+    }
+
+    function overrideImageKey(imageKey: string, overrides: variant): string {
+        let attrDelimiter = imageKey.lastIndexOf("?")
+        let imageAttrs = imageKey.substring(attrDelimiter + 1);
+        for (const key in overrides) {
+            let value = overrides[key];
+            if (!value) continue;
+            if (typeof value === "object" && value.length)
+                if (value.every(val => value[0] === val))
+                    value = value[0];
+                else
+                    value = value.join(";");
+            const attrPattern = RegExp(`(,${key}=)[^,]*(,|$)`);
+            if (attrPattern.test(imageAttrs)) {
+                imageAttrs = imageAttrs.replace(attrPattern, `$1${value}$2`);
+            } else {
+                if (imageAttrs.length > 0)
+                    imageAttrs += ",";
+                imageAttrs += `${key}=${value}`;
+            }
+        }
+        return imageKey.substring(0, attrDelimiter + 1) + imageAttrs;
     }
 }

@@ -15,49 +15,49 @@ Window {
 
     Settings {
         id: settings
-        category: "Layouts"
-        property string jsonData: "{}"
+        property string layoutData: "{}"
+        property string imageData: "{}"
         property alias backlightBrightness: brightnessSlider.value
 
-        function editLayout(name: string, data): void {
+        function editLayout(name: string, data: variant): void {
             if ("blocks" in data)
                 return;
-            let configData = JSON.parse(jsonData);
+            let configData = JSON.parse(layoutData);
             if (!(name in configData))
                 configData[name] = { rows: 3, columns: 5, blocks: [] };
             Object.assign(configData[name], data);
-            jsonData = JSON.stringify(configData);
+            layoutData = JSON.stringify(configData);
         }
         function removeLayout(name: string): void {
-            let configData = JSON.parse(jsonData);
+            let configData = JSON.parse(layoutData);
             if (name in configData) {
                 delete configData[name];
-                jsonData = JSON.stringify(configData);
+                layoutData = JSON.stringify(configData);
             }
         }
         function saveBlock(layoutName: string, data: variant): void {
-            let configData = JSON.parse(jsonData);
+            let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
                 configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
             configData[layoutName].blocks.push(data);
-            jsonData = JSON.stringify(configData);
+            layoutData = JSON.stringify(configData);
         }
-        function editBlock(layoutName: string, row: int, column: int, data): void {
-            let configData = JSON.parse(jsonData);
+        function editBlock(layoutName: string, row: int, column: int, data: variant): void {
+            let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
                 configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
             for (let block of configData[layoutName].blocks) {
                 if (row - block.row >= 0 && row - block.row < block.rowSpan
                     && column - block.column >= 0 && column - block.column < block.columnSpan) {
                     Object.assign(block, data);
-                    jsonData = JSON.stringify(configData);
+                    layoutData = JSON.stringify(configData);
                     return;
                 }
             }
             console.error("Tried editing Block at row", row, "and column", column, ", but wasn't found");
         }
         function removeBlock(layoutName: string, row: int, column: int): void {
-            let configData = JSON.parse(jsonData);
+            let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
                 configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
             for (let i in configData[layoutName].blocks) {
@@ -65,14 +65,14 @@ Window {
                 if (row - block.row >= 0 && row - block.row < block.rowSpan
                     && column - block.column >= 0 && column - block.column < block.columnSpan) {
                     configData[layoutName].blocks.splice(i, 1);
-                    jsonData = JSON.stringify(configData);
+                    layoutData = JSON.stringify(configData);
                     return;
                 }
             }
             console.error("Tried removing Block at row", row, "and column", column, ", but wasn't found");
         }
         function loadBlocks(layoutName: string, createCall: variant): void {
-            let configData = JSON.parse(jsonData);
+            let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
                 configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
             for (let block of configData[layoutName].blocks) {
@@ -80,7 +80,7 @@ Window {
             }
         }
         function loadBlock(layoutName: string, row: int, column: int): variant {
-            let configData = JSON.parse(jsonData);
+            let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
                 configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
             for (let block of configData[layoutName].blocks) {
@@ -91,7 +91,41 @@ Window {
             console.error("Tried loading Block at row", row, "and column", column, ", but wasn't found");
         }
         function loadLayout(name: string): variant {
-            return JSON.parse(jsonData)[name];
+            let configData = JSON.parse(layoutData);
+            return name in configData ? configData[name] : { rows: 3, columns: 5, blocks: [] };
+        }
+
+        function saveImage(file: string, data: variant): void {
+            let configData = JSON.parse(imageData);
+            configData[file] = data;
+            imageData = JSON.stringify(configData);
+        }
+        function editImage(file: string, data: variant): void {
+            let configData = JSON.parse(imageData);
+            configData[file] = file in configData ? Object.assign(configData[file], data) : data;
+            imageData = JSON.stringify(configData);
+        }
+        function removeImage(file: string): void {
+            let configData = JSON.parse(imageData);
+            if (file in configData) {
+                Connection.deleteCachedImage(configData[file].path);
+                delete configData[file];
+                imageData = JSON.stringify(configData);
+            }
+        }
+        function loadImages(): variant {
+            let configData = JSON.parse(imageData);
+            return Object.entries(configData).map(([key, value]) => Object.assign(value, {key}));
+        }
+        function loadImagesObj(): variant {
+            let configData = JSON.parse(imageData);
+            return configData;
+        }
+        function loadImage(file: string): variant {
+            let configData = JSON.parse(imageData);
+            if (!(file in configData)) return Object();
+            configData[file].key = file;
+            return configData[file];
         }
     }
 
@@ -132,6 +166,7 @@ Window {
                     from: 0
                     to: 1023
                     stepSize: 1
+                    value: 1023
                     orientation: Qt.Vertical
                     Layout.margins: Theme.sidebarRadius - Theme.sidebarButtonRadius
                     handle: null
@@ -220,6 +255,30 @@ Window {
                         border.width: Theme.sidebarButtonBorderWidth
                     }
                 }
+                Button {
+                    implicitWidth: Theme.sidebarWidth - 2 * (Theme.sidebarRadius - Theme.sidebarButtonRadius)
+                    implicitHeight: Theme.sidebarWidth - 2 * (Theme.sidebarRadius - Theme.sidebarButtonRadius)
+                    Layout.margins: Theme.sidebarRadius - Theme.sidebarButtonRadius
+                    Layout.topMargin: 0
+                    text: Theme.icons.image
+                    font.family: Theme.iconFontName
+                    font.weight: Theme.iconFontWeight
+                    font.pixelSize: Theme.sidebarIconSize
+                    background: Rectangle {
+                        color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                        radius: Theme.sidebarButtonRadius
+                        border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                        border.width: Theme.sidebarButtonBorderWidth
+                    }
+                    onClicked: {
+                        imagesMenu.open()
+                        const updateImageKeys = () => {
+                            controlGrid.loadLayout();
+                            imagesMenu.closed.disconnect(updateImageKeys);
+                        }
+                        imagesMenu.closed.connect(updateImageKeys);
+                    }
+                }
             }
         }
         Rectangle {
@@ -266,21 +325,38 @@ Window {
         id: controlGridBlockMenu
         settings: settings
         controlGrid: controlGrid
+        bigTextBox: bigTextBox
         colorPicker: colorPicker
+        imagesMenu: imagesMenu
+    }
+    ImagesMenu {
+        id: imagesMenu
+        settings: settings
+        bigTextBox: bigTextBox
     }
     ColorPicker {
         id: colorPicker
+    }
+    BigTextBox {
+        id: bigTextBox
     }
     Toastify {
         id: toastManager
     }
 
     Component.onCompleted: {
+        Utils.settings = settings;
         Connection.connectedChanged.connect(onConnectionChanged);
         Connection.connectionError.connect(onConnectionError);
         Connection.updateDisplaySize.connect((width, height) => {
             if (displayPanel.displayWidth !== width || displayPanel.displayHeight !== height)
                 displayPanel.changeDisplaySize(width, height);
+        });
+        Connection.imageCached.connect((url, filename, path) => {
+            if (settings.loadImage(filename))
+                settings.editImage(filename, {url, path});
+            else
+                settings.saveImage(filename, {url, path});
         });
     }
 
@@ -294,14 +370,24 @@ Window {
             closeOnClick: true,
             hideProgressBar: false
         });
-        if (!Connection.connected) return;
-        Connection.setBacklightBrightness(brightnessSlider.value);
-        Connection.setLayout(controlGrid.rows, controlGrid.columns);
-        settings.loadBlocks(controlGrid.layoutName, (block) => {
-            let index = (block.row * controlGrid.columns) + block.column;
-            let index2 = index + (block.columnSpan-1) + ((block.rowSpan-1) * controlGrid.columns);
-            Connection.addWidget(block.type, index, index2, block.style);
-        });
+        if (Connection.connected) {
+            Connection.setBacklightBrightness(brightnessSlider.value);
+            Connection.removeScreenStyles();
+            Connection.setLayout(controlGrid.rows, controlGrid.columns);
+            controlGrid.updateImages();
+            settings.loadBlocks(controlGrid.layoutName, block => {
+                let index = (block.row * controlGrid.columns) + block.column;
+                let index2 = index + (block.columnSpan-1) + ((block.rowSpan-1) * controlGrid.columns);
+                Connection.addWidget(block.type, index, index2, block.style);
+                for (let i = 0; i < block.subWidgets.length; i++) {
+                    const subWidget = block.subWidgets[i];
+                    if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+                    Connection.subWidget(subWidget.type, index, i+1, true, subWidget);
+                }
+            });
+        } else {
+            Connection.clearImages();
+        }
     }
 
     function onConnectionError(error: string): void {

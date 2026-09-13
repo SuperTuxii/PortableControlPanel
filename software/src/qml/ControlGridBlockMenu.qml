@@ -8,9 +8,12 @@ import LvglSimulator
 Popup {
     id: popup
     readonly property list<string> blockTypes: ["Button"]
+    readonly property list<string> subWidgetTypes: ["Text", "Image"]
     required property Settings settings
     required property ControlGridQml controlGrid
+    required property BigTextBox bigTextBox
     required property ColorPicker colorPicker
+    required property ImagesMenu imagesMenu
     property bool newBlock
     property int row
     property int column
@@ -22,6 +25,7 @@ Popup {
     width: Math.max(Overlay.overlay.width / 2, Math.min(640, Overlay.overlay.width))
     height: Math.max(Overlay.overlay.height / 2, Math.min(640, Overlay.overlay.height))
     focus: true
+    modal: true
     padding: 30
 
     background: Rectangle {
@@ -80,12 +84,13 @@ Popup {
                 id: menuValueScroll
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                ScrollBar.vertical.interactive: false
+                ScrollBar.vertical.policy: ScrollBar.AlwaysOn
                 clip: true
 
                 ColumnLayout {
                     id: menuValueLayout
-                    property var styleData: {}
+                    property var blockStyleData: {}
+                    property var styleData: blockStyleData
                     property int styleSelector: 0
                     Component.onCompleted: styleSelector = stateComboBox.currentValue | partComboBox.currentValue
 
@@ -324,11 +329,14 @@ Popup {
                 Layout.fillWidth: true
                 Layout.bottomMargin: 10
             }
+            // Main Widget Configuration
             OptionMenuValue {
                 id: typeMenuValue
                 attrKey: "type"
                 propName: "Type"
                 options: popup.blockTypes
+                visible: subWidgetsScroll.subIndex === 0
+                Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
             }
             IntMenuValue {
@@ -337,6 +345,8 @@ Popup {
                 propName: "Row"
                 min: 0
                 max: popup.rows - 1
+                visible: subWidgetsScroll.subIndex === 0
+                Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
             }
             IntMenuValue {
@@ -345,6 +355,8 @@ Popup {
                 propName: "Column"
                 min: 0
                 max: popup.columns - 1
+                visible: subWidgetsScroll.subIndex === 0
+                Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
             }
             IntMenuValue {
@@ -353,6 +365,8 @@ Popup {
                 propName: "Row Span"
                 min: 1
                 max: popup.rows - rowMenuValue.numberValue
+                visible: subWidgetsScroll.subIndex === 0
+                Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
                 onValueChanged: {
                     configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
@@ -365,17 +379,214 @@ Popup {
                 propName: "Column Span"
                 min: 1
                 max: popup.columns - columnMenuValue.numberValue
+                visible: subWidgetsScroll.subIndex === 0
+                Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
                 onValueChanged: {
                     configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
                     updateDemoDisplayLive();
                 }
             }
+            Label {
+                text: "Sub Widgets:"
+                font.pointSize: 13
+                font.underline: true
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                visible: subWidgetsScroll.subIndex === 0
+                Layout.fillWidth: true
+                Layout.topMargin: 5
+                Layout.bottomMargin: 5
+            }
+            ScrollView {
+                id: subWidgetsScroll
+                readonly property string attrKey: "subWidgets"
+                property alias value: subWidgetsView.model
+                property int subIndex: 0
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                ScrollBar.vertical.policy: ScrollBar.AlwaysOn
+                visible: subWidgetsScroll.subIndex === 0
+                clip: true
+
+                ColumnLayout {
+                    width: subWidgetsScroll.availableWidth
+                    ListView {
+                        id: subWidgetsView
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: contentHeight
+                        spacing: 5
+                        clip: true
+                        model: []
+                        delegate: RowLayout {
+                            required property int index
+                            required property var model
+                            height: 30
+                            width: ListView.view.width
+                            Label {
+                                text: (parent.model.name && parent.model.name.length > 0 ? parent.model.name : parent.model.type) ?? ""
+                                color: Theme.labelWhite
+                                verticalAlignment: Text.AlignVCenter
+                                horizontalAlignment: Text.AlignHCenter
+                                Layout.fillHeight: true
+                                Layout.fillWidth: true
+                            }
+                            Button {
+                                Layout.fillHeight: true
+                                Layout.preferredWidth: height
+                                text: Theme.icons.edit
+                                font.family: Theme.iconFontName
+                                font.weight: Theme.iconFontWeight
+                                font.pixelSize: Theme.iconFontSize
+                                contentItem: Text {
+                                    text: parent.text
+                                    font: parent.font
+                                    opacity: parent.enabled ? 1.0 : 0.3
+                                    color: parent.down ? Theme.buttonBlueActive : Theme.buttonBlue
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                background: Rectangle {
+                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                    radius: Theme.buttonRadius
+                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                    border.width: Theme.buttonBorderWidth
+                                }
+                                onClicked: popup.editSubWidget(index)
+                            }
+                            Button {
+                                Layout.fillHeight: true
+                                Layout.preferredWidth: height
+                                text: Theme.icons.trash
+                                font.family: Theme.iconFontName
+                                font.weight: Theme.iconFontWeight
+                                font.pixelSize: Theme.iconFontSize
+                                contentItem: Text {
+                                    text: parent.text
+                                    font: parent.font
+                                    opacity: parent.enabled ? 1.0 : 0.3
+                                    color: parent.down ? Theme.buttonRedActive : Theme.buttonRed
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                background: Rectangle {
+                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                    radius: Theme.buttonRadius
+                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                    border.width: Theme.buttonBorderWidth
+                                }
+                                onClicked: subWidgetsView.model.splice(index, 1);
+                            }
+                        }
+                        onModelChanged: Qt.callLater(popup.updateDemoDisplayLive);
+                    }
+                    RowLayout {
+                        id: subWidgetAdder
+                        Layout.fillWidth: true
+                        ComboBox {
+                            id: subWidgetComboBox
+                            Layout.fillWidth: true
+                            model: popup.subWidgetTypes
+                            background: Rectangle {
+                                color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                radius: Theme.buttonRadius
+                                border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                border.width: Theme.buttonBorderWidth
+                            }
+                            Component.onCompleted: currentIndex = -1
+                        }
+                        Button {
+                            Layout.preferredWidth: 30
+                            Layout.preferredHeight: 30
+                            Layout.alignment: Qt.AlignCenter
+                            text: Theme.icons.add
+                            font.family: Theme.iconFontName
+                            font.weight: Theme.iconFontWeight
+                            font.pixelSize: Theme.iconFontSize
+                            enabled: subWidgetComboBox.currentIndex !== -1
+                            background: Rectangle {
+                                color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                radius: Theme.buttonRadius
+                                border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                border.width: Theme.buttonBorderWidth
+                            }
+                            onClicked: {
+                                const subWidget = { type: subWidgetComboBox.currentText };
+                                if (subWidgetComboBox.currentText === "Image")
+                                    subWidget.style = { 0: [{ attrKey: Connection.Width, name: "Size", text: "100p%", value: 100 }]}
+                                subWidgetsView.model.push(subWidget);
+                                popup.updateDemoDisplayLive();
+                                popup.scrollSubWidgetsToBottom();
+                            }
+                        }
+                    }
+                }
+            }
+            // Sub Widget Configuration
+            StringMenuValue {
+                id: subNameMenuValue
+                attrKey: "name"
+                propName: "Name"
+                visible: subWidgetsScroll.subIndex !== 0
+                Layout.minimumHeight: 30
+                Layout.maximumHeight: 30
+            }
+            Loader {
+                id: subWidgetValueLoader
+                property var data: {
+                    if (!active) return;
+                    let data = {};
+                    for (let menuValue of subWidgetValueLoader.item.children) {
+                        if (menuValue.attrKey === undefined || !menuValue.visible) continue;
+                        if (menuValue instanceof IntMenuValue) {
+                            data[menuValue.attrKey] = menuValue.numberValue;
+                        } else {
+                            data[menuValue.attrKey] = menuValue.value;
+                        }
+                    }
+                    return data;
+                }
+                active: subWidgetsScroll.subIndex !== 0
+                Layout.fillWidth: true
+                Layout.maximumHeight: active ? Number.POSITIVE_INFINITY : 0
+                onDataChanged: {
+                    Qt.callLater(popup.updateDemoDisplayLive)
+                }
+            }
             Item {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                Layout.minimumWidth: removeButton.implicitWidth + 10 + saveButton.implicitWidth
-                Layout.minimumHeight: removeButton.implicitHeight + saveButton.implicitHeight
+                Layout.minimumWidth: removeButton.implicitWidth + 10 + saveButton.implicitWidth + 10 + backButton.implicitWidth
+                Layout.minimumHeight: Math.max(removeButton.implicitHeight, Math.max(saveButton.implicitHeight, backButton.implicitHeight))
+                Button {
+                    id: backButton
+                    implicitHeight: 30
+                    horizontalPadding: 10
+                    text: Theme.icons.back
+                    font.family: Theme.iconFontName
+                    font.weight: Theme.iconFontWeight
+                    font.pixelSize: Theme.iconFontSize
+                    anchors.bottom: parent.bottom
+                    visible: subWidgetsScroll.subIndex !== 0
+                    anchors.right: removeButton.left
+                    anchors.rightMargin: 10
+                    contentItem: Text {
+                        text: parent.text
+                        font: parent.font
+                        opacity: parent.enabled ? 1.0 : 0.3
+                        color: parent.down ? Theme.buttonBlueActive : Theme.buttonBlue
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                        radius: Theme.buttonRadius
+                        border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                        border.width: Theme.buttonBorderWidth
+                    }
+
+                    onClicked: popup.returnToMainWidget()
+                }
                 Button {
                     id: removeButton
                     implicitHeight: 30
@@ -384,7 +595,7 @@ Popup {
                     font.family: Theme.iconFontName
                     font.weight: Theme.iconFontWeight
                     font.pixelSize: Theme.iconFontSize
-                    enabled: !popup.newBlock
+                    enabled: !popup.newBlock && subWidgetsScroll.subIndex === 0
                     anchors.bottom: parent.bottom
                     anchors.right: saveButton.left
                     anchors.rightMargin: 10
@@ -413,6 +624,7 @@ Popup {
                     font.family: Theme.iconFontName
                     font.weight: Theme.iconFontWeight
                     font.pixelSize: Theme.iconFontSize
+                    enabled: subWidgetsScroll.subIndex === 0
                     anchors.bottom: parent.bottom
                     anchors.right: parent.right
                     contentItem: Text {
@@ -470,13 +682,17 @@ Popup {
         demoControlGrid.outerPad = controlGrid.outerPad;
         demoControlGrid.rowPad = controlGrid.rowPad;
         demoControlGrid.columnPad = controlGrid.columnPad;
+        demoControlGrid.clearImages();
         clearStyleValues();
         loadBlock(blockData);
         configureDemoDisplayCrop(blockData ? blockData.rowSpan : 1, blockData ? blockData.columnSpan : 1);
         loadDemoDisplay(blockData ? blockData.rowSpan : 1, blockData ? blockData.columnSpan : 1);
     }
 
-    onClosed: demoControlGrid.clear()
+    onClosed: {
+        returnToMainWidget();
+        demoControlGrid.clear();
+    }
 
     function configureDemoDisplayCrop(rowSpan: int, columnSpan: int): void {
         demoDisplayPanel.imageClipRect = Qt.rect(
@@ -497,46 +713,132 @@ Popup {
     function loadDemoDisplay(rowSpan: int, columnSpan: int): void {
         demoControlGrid.remove(0, 0);
         demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpan-1) * columns) + (columnSpan-1));
-        for (const styleSelector in menuValueLayout.styleData) {
-            demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
+        for (const styleSelector in menuValueLayout.blockStyleData) {
+            demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.blockStyleData[styleSelector]);
         }
+        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
+            const subWidget = subWidgetsScroll.value[i];
+            if (subWidget.type === "Image" && (!("image" in subWidget) || !("imageKey" in subWidget.image)
+                || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+            const subIndex = demoControlGrid.subWidget(subWidget.type, 0, 0, subWidget);
+            if (subIndex !== i+1) {
+                console.error(`Expected Sub Widget to placed at index ${i+1}, but was placed at ${subIndex}`);
+                return;
+            }
+            for (const styleSelector in subWidget.style) {
+                demoControlGrid.setStyle(0, subIndex, styleSelector, subWidget.style[styleSelector]);
+            }
+        }
+    }
+    function updateImagesLive(): void {
+        let images = new Set();
+        for (const styleSelector in menuValueLayout.blockStyleData) {
+            if (parseInt(styleSelector) === menuValueLayout.styleSelector && subWidgetsScroll.subIndex === 0)
+                continue;
+            for (const styleElement of menuValueLayout.blockStyleData[styleSelector]) {
+                if (styleElement.attrKey === Connection.BackgroundImageIndex
+                    && styleElement.value && styleElement.value.imageKey && styleElement.value.imageKey.length > 1)
+                    images.add(styleElement.value.imageKey);
+            }
+        }
+        for (const styleElement of styleValueLayout.data) {
+            if (styleElement.attrKey === Connection.BackgroundImageIndex
+                && styleElement.value && styleElement.value.imageKey && styleElement.value.imageKey.length > 1)
+                images.add(styleElement.value.imageKey);
+        }
+        for (let i = 1; i <= subWidgetsScroll.value.length; i++) {
+            const subWidget = subWidgetsScroll.subIndex === i ?
+                    Object.assign({}, subWidgetsScroll.value[i-1], subWidgetValueLoader.data) :
+                    subWidgetsScroll.value[i-1];
+            if (subWidget.type === "Image" && subWidget.image && subWidget.image.imageKey)
+                images.add(subWidget.image.imageKey);
+            for (const styleSelector in subWidget.style) {
+                if (parseInt(styleSelector) === menuValueLayout.styleSelector && subWidgetsScroll.subIndex === i)
+                    continue;
+                for (const styleElement of subWidget.style[styleSelector]) {
+                    if (styleElement.attrKey === Connection.BackgroundImageIndex
+                        && styleElement.value && styleElement.value.imageKey && styleElement.value.imageKey.length > 1)
+                        images.add(styleElement.value.imageKey);
+                }
+            }
+        }
+        demoControlGrid.loadImages(Array.from(images));
     }
     function updateDemoDisplayLive(): void {
         if (!popup.visible) return;
         demoControlGrid.remove(0, 0);
         demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpanMenuValue.numberValue-1) * columns) + (columnSpanMenuValue.numberValue-1));
+        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
+            const subWidget = subWidgetsScroll.subIndex === i + 1 ?
+                Object.assign({}, subWidgetsScroll.value[i], subWidgetValueLoader.data) :
+                subWidgetsScroll.value[i];
+            if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+            const subIndex = demoControlGrid.subWidget(subWidget.type, 0, 0, subWidget);
+            if (subIndex !== i + 1) {
+                console.error(`Expected Sub Widget to placed at index ${i + 1}, but was placed at ${subIndex}`);
+                return;
+            }
+        }
 
         buildMacros();
         revalidateStyleValue();
+        updateImagesLive();
 
         let styleSet = false;
-        for (const styleSelector in menuValueLayout.styleData) {
-            if (parseInt(styleSelector) === menuValueLayout.styleSelector) {
+        for (const styleSelector in menuValueLayout.blockStyleData) {
+            if (parseInt(styleSelector) === menuValueLayout.styleSelector && subWidgetsScroll.subIndex === 0) {
                 demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
                 styleSet = true;
             } else {
-                demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.styleData[styleSelector]);
+                demoControlGrid.setStyle(0, 0, styleSelector, menuValueLayout.blockStyleData[styleSelector]);
             }
         }
-        if (!styleSet)
-            demoControlGrid.setStyle(0, 0, menuValueLayout.styleSelector, styleValueLayout.data);
+        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
+            const subWidget = subWidgetsScroll.subIndex === i + 1 ?
+                Object.assign({}, subWidgetsScroll.value[i], subWidgetValueLoader.data) :
+                subWidgetsScroll.value[i];
+            if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+            const subIndex = i + 1;
+            for (const styleSelector in subWidget.style) {
+                if (parseInt(styleSelector) === menuValueLayout.styleSelector && subWidgetsScroll.subIndex === subIndex) {
+                    demoControlGrid.setStyle(0, subIndex, menuValueLayout.styleSelector, styleValueLayout.data);
+                    styleSet = true;
+                } else {
+                    demoControlGrid.setStyle(0, subIndex, styleSelector, subWidget.style[styleSelector]);
+                }
+            }
+        }
+        if (!styleSet) {
+            if (subWidgetsScroll.subIndex !== 0) {
+                const subWidget = Object.assign({}, subWidgetsScroll.value[subWidgetsScroll.subIndex-1], subWidgetValueLoader.data);
+                if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) {
+                    styleValueLayout.dirty = false;
+                    return;
+                }
+            }
+            demoControlGrid.setStyle(0, subWidgetsScroll.subIndex, menuValueLayout.styleSelector, styleValueLayout.data);
+        }
         styleValueLayout.dirty = false;
     }
     function loadBlock(data): void {
         if (!newBlock) {
-            menuValueLayout.styleData = data.style ?? {};
+            menuValueLayout.blockStyleData = data.style ?? {};
+            menuValueLayout.styleData = Qt.binding(() => menuValueLayout.blockStyleData);
             menuValueLayout.styleSelector = -1;
             changeStyleSelector();
             for (let menuValue of rightLayout.children) {
-                if (menuValue.attrKey === undefined) continue;
+                if (menuValue.attrKey === undefined || !menuValue.visible) continue;
                 menuValue.value = data[menuValue.attrKey];
             }
+            if (!subWidgetsScroll.value) subWidgetsScroll.value = [];
         } else {
-            menuValueLayout.styleData = {};
+            menuValueLayout.blockStyleData = {};
+            menuValueLayout.styleData = Qt.binding(() => menuValueLayout.blockStyleData);
             rowSpanMenuValue.value = 1;
             columnSpanMenuValue.value = 1;
             rowMenuValue.value = row;
             columnMenuValue.value = column;
+            subWidgetsScroll.value = [];
         }
     }
     function saveBlock(): void {
@@ -544,19 +846,23 @@ Popup {
             menuValueLayout.styleData[menuValueLayout.styleSelector] = styleValueLayout.data;
         else if (menuValueLayout.styleSelector in menuValueLayout.styleData)
             delete menuValueLayout.styleData[menuValueLayout.styleSelector];
+        if (subWidgetsScroll.subIndex !== 0)
+            subWidgetsView.model[subWidgetsScroll.subIndex-1].style = menuValueLayout.styleData;
         let data = {
-            style: menuValueLayout.styleData,
+            style: menuValueLayout.blockStyleData,
         };
         for (let menuValue of rightLayout.children) {
-            if (menuValue.attrKey === undefined) continue;
+            if (menuValue.attrKey === undefined || !menuValue.visible) continue;
             if (menuValue instanceof IntMenuValue)
                 data[menuValue.attrKey] = menuValue.numberValue;
             else
                 data[menuValue.attrKey] = menuValue.value;
         }
-        if (!newBlock) {
-            controlGrid.remove((row * columns) + column, 0);
-            Connection.remove((row * columns) + column, 0);
+        if (newBlock) {
+            controlGrid.updateImages(-1, -1, data);
+        } else {
+            controlGrid.removeWidget((row * columns) + column, 0);
+            controlGrid.updateImages(row, column, data);
         }
         if (controlGrid.addBlock(data)) {
             if (newBlock) {
@@ -567,6 +873,7 @@ Popup {
             popup.close();
         } else {
             data = settings.loadBlock(controlGrid.layoutName, row, column);
+            controlGrid.updateImages();
             if (data !== undefined)
                 controlGrid.addBlock(data);
             failLabel.text = "Can't place block here";
@@ -577,8 +884,8 @@ Popup {
         if (newBlock)
             return;
         settings.removeBlock(controlGrid.layoutName, row, column);
-        controlGrid.remove((row * controlGrid.columns) + column, 0);
-        Connection.remove((row * controlGrid.columns) + column, 0);
+        controlGrid.updateImages();
+        controlGrid.removeWidget((row * controlGrid.columns) + column, 0);
         popup.close();
     }
 
@@ -613,6 +920,7 @@ Popup {
                     min: -(1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)),
                     max: (1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)) - 1,
                     preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector, true),
+                    bigTextBox: popup.bigTextBox,
                 });
             } else {
                 return addStyleValue("menuValues/IntMenuValue.qml", {
@@ -621,6 +929,7 @@ Popup {
                     min: -(1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)),
                     max: (1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)) - 1,
                     preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
+                    bigTextBox: popup.bigTextBox,
                 });
             }
         } else if (styleKeyValue >= Connection.ColorOpacityStyleKeyMin && styleKeyValue <= Connection.ColorOpacityStyleKeyMax) {
@@ -630,13 +939,24 @@ Popup {
                 colorPicker: popup.colorPicker
             });
         } else if (styleKeyValue >= Connection.ByteStyleKeyMin && styleKeyValue <= Connection.ByteStyleKeyMax) {
+            if (styleKeyValue === Connection.BackgroundImageIndex) {
+                return addStyleValue("menuValues/ImageMenuValue.qml", {
+                    attrKey: styleKeyValue,
+                    propName: styleKeyText,
+                    imagesMenu: popup.imagesMenu,
+                    macros: Qt.binding(() => macros),
+                    styleSelector: Qt.binding(() => menuValueLayout.styleSelector)
+                });
+            } else {
                 return addStyleValue("menuValues/IntMenuValue.qml", {
                     attrKey: styleKeyValue,
                     propName: styleKeyText,
                     min: 0,
                     max: (1 << 8) - 1,
                     preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
+                    bigTextBox: popup.bigTextBox,
                 });
+            }
         } else if (styleKeyValue >= Connection.NonTypeStyleKeyMin && styleKeyValue <= Connection.NonTypeStyleKeyMax) {
             if (styleKeyText.startsWith("Font")) {
                 return addStyleValue("menuValues/NonTypeMenuValue.qml", {
@@ -646,7 +966,7 @@ Popup {
                 });
             } else if (styleKeyValue === Connection.AlignTopLeft) {
                 let options = [];
-                for (let i = Connection.AlignTopLeft; i <= Connection.AlignRightMid; i++) {
+                for (let i = Connection.AlignTopLeft; i <= Connection.AlignCenter; i++) {
                     options.push({ text: Connection.styleKeyString(i).slice(5), value: i });
                 }
                 return addStyleValue("menuValues/ValueOptionMenuValue.qml", {
@@ -688,6 +1008,8 @@ Popup {
             menuValueLayout.styleData[menuValueLayout.styleSelector] = styleValueLayout.data;
         else if (menuValueLayout.styleSelector in menuValueLayout.styleData)
             delete menuValueLayout.styleData[menuValueLayout.styleSelector];
+        if (subWidgetsScroll.subIndex !== 0)
+            subWidgetsView.model[subWidgetsScroll.subIndex-1].style = menuValueLayout.styleData;
         menuValueLayout.styleSelector = stateComboBox.currentValue | partComboBox.currentValue;
         clearStyleValues();
         if (menuValueLayout.styleSelector in menuValueLayout.styleData) {
@@ -711,11 +1033,17 @@ Popup {
         menuValueScroll.contentItem.contentY = menuValueScroll.contentItem.contentHeight - menuValueScroll.contentItem.height + 100;
     }
 
+    function scrollSubWidgetsToBottom(): void {
+        subWidgetsScroll.contentItem.contentY = subWidgetsScroll.contentItem.contentHeight - subWidgetsScroll.contentItem.height + 100;
+    }
+
     function buildMacros(): void {
-        let sizePosData = { index: 0 };
+        const mainMacros = {};
+        const sizePosData = { index: 0, subIndex: subWidgetsScroll.subIndex };
         demoControlGrid.insertCoordsData(sizePosData);
-        Utils.buildDimensionMacros(
-            macros,
+        Utils.buildMacros(
+            mainMacros,
+            menuValueLayout.styleData,
             sizePosData.width,
             sizePosData.height,
             rowMenuValue.numberValue,
@@ -723,16 +1051,25 @@ Popup {
             rowSpanMenuValue.numberValue,
             columnSpanMenuValue.numberValue
         );
-        if ("style" in macros) {
-            for (let styleData of styleValueLayout.data) {
-                if (typeof styleData.value === "number")
-                    macros.style[menuValueLayout.styleSelector][styleData.name.toLowerCase()] = styleData.value;
-                else if (styleData.value.length && typeof styleData.value !== "string")
-                    macros.style[menuValueLayout.styleSelector][styleData.name.toLowerCase()] = styleData.value.length === 1 ? styleData.value[0] : styleData.value;
-            }
-        } else {
-            Utils.buildStyleMacros(macros, menuValueLayout.styleData);
+        mainMacros.style[menuValueLayout.styleSelector] = {};
+        Utils.buildSelectStyleMacros(mainMacros.style[menuValueLayout.styleSelector], styleValueLayout.data);
+        if (subWidgetsScroll.subIndex !== 0) {
+            const parentMacros = {};
+            const parentSizePosData = { index: 0 };
+            demoControlGrid.insertCoordsData(parentSizePosData);
+            Utils.buildMacros(
+                parentMacros,
+                menuValueLayout.blockStyleData,
+                parentSizePosData.width,
+                parentSizePosData.height,
+                rowMenuValue.numberValue,
+                columnMenuValue.numberValue,
+                rowSpanMenuValue.numberValue,
+                columnSpanMenuValue.numberValue
+            );
+            mainMacros.parent = parentMacros;
         }
+        macros = mainMacros;
     }
     function revalidateStyleValue(): void {
         for (let refreshes = 0; refreshes < 10; refreshes++) {
@@ -790,5 +1127,68 @@ Popup {
             }
         }
         Utils.tooManyStyleDataRecursions(macros, menuValueLayout.styleData, menuValueLayout.styleSelector);
+    }
+
+    // Sub Widgets Layout
+    function editSubWidget(index: int): void {
+        if (subWidgetsScroll.subIndex !== 0)
+            returnToMainWidget();
+        if (styleValueLayout.data.length !== 0)
+            menuValueLayout.styleData[menuValueLayout.styleSelector] = styleValueLayout.data;
+        else if (menuValueLayout.styleSelector in menuValueLayout.styleData)
+            delete menuValueLayout.styleData[menuValueLayout.styleSelector];
+        if (subWidgetsScroll.subIndex !== 0)
+            subWidgetsView.model[subWidgetsScroll.subIndex-1].style = menuValueLayout.styleData;
+        if (!subWidgetsView.model[index].style)
+            subWidgetsView.model[index].style = {};
+        subWidgetValueLoader.setSource("subWidgetValues/Sub" + subWidgetsView.model[index].type + "Value.qml",
+                subWidgetsView.model[index].type === "Image" ?
+                    { imagesMenu: popup.imagesMenu, macros: Qt.binding(() => macros) } : {});
+        subWidgetsScroll.subIndex = index + 1;
+        subNameMenuValue.value = subWidgetsView.model[index].name ?? "";
+        for (let menuValue of subWidgetValueLoader.item.children) {
+            if (menuValue.attrKey === undefined || !menuValue.visible) continue;
+            if (!(menuValue.attrKey in subWidgetsView.model[index]) && typeof menuValue.value === "string") {
+                if (!(menuValue instanceof IntMenuValue))
+                    menuValue.value = "";
+                continue;
+            }
+            menuValue.value = subWidgetsView.model[index][menuValue.attrKey];
+        }
+        menuValueLayout.styleData = Qt.binding(() => subWidgetsView.model[index].style);
+        menuValueLayout.styleSelector = -1;
+        clearStyleValues();
+        stateComboBox.currentIndex = 0;
+        partComboBox.currentIndex = 0;
+        changeStyleSelector();
+    }
+
+    function returnToMainWidget(): void {
+        if (subWidgetsScroll.subIndex === 0) return;
+        const index = subWidgetsScroll.subIndex - 1;
+        if (subNameMenuValue.value.length === 0)
+            delete subWidgetsView.model[index].name;
+        else
+            subWidgetsView.model[index].name = subNameMenuValue.value;
+        for (let menuValue of subWidgetValueLoader.item.children) {
+            if (menuValue.attrKey === undefined || !menuValue.visible) continue;
+            if (menuValue instanceof IntMenuValue) {
+                subWidgetsView.model[index][menuValue.attrKey] = menuValue.numberValue;
+            } else {
+                subWidgetsView.model[index][menuValue.attrKey] = menuValue.value;
+            }
+        }
+        if (styleValueLayout.data.length !== 0)
+            menuValueLayout.styleData[menuValueLayout.styleSelector] = styleValueLayout.data;
+        else if (menuValueLayout.styleSelector in menuValueLayout.styleData)
+            delete menuValueLayout.styleData[menuValueLayout.styleSelector];
+        subWidgetsView.model[index].style = menuValueLayout.styleData;
+        menuValueLayout.styleData = Qt.binding(() => menuValueLayout.blockStyleData);
+        menuValueLayout.styleSelector = -1;
+        clearStyleValues();
+        stateComboBox.currentIndex = 0;
+        partComboBox.currentIndex = 0;
+        subWidgetsScroll.subIndex = 0;
+        changeStyleSelector();
     }
 }

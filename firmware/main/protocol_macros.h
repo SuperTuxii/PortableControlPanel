@@ -1,7 +1,7 @@
 #ifndef CONTROLPANELSOFTWARE_PROTOCOL_MACROS_H
 #define CONTROLPANELSOFTWARE_PROTOCOL_MACROS_H
 
-#define PROTOCOL_VERSION "0.1-alpha"
+#define PROTOCOL_VERSION "0.2-alpha"
 
 #define PROTOCOL_COMMANDS_ENUM enum Commands {\
     /* No Operands & No Data */\
@@ -10,6 +10,7 @@
     DeepSleepCMD,\
     TestFillCMD,\
     ClearCMD,\
+    ResetScreenStylesCMD,\
     /* Operands & No Data*/\
     SetBacklightBrightnessCMD = 0x40,\
     SetLayoutCMD,\
@@ -17,12 +18,16 @@
     ChangeWidgetSizeCMD,\
     RemoveWidgetCMD,\
     RemoveImageCMD,\
+    ResetStylesCMD,\
     /* No Operands & Data */\
     SetOuterPadCMD = 0x80,\
     SetRowPadCMD,\
     SetColumnPadCMD,\
+    SetScreenStyleCMD,\
+    ResetScreenStyleCMD,\
     /* Operands & Data */\
     SetStyleDataCMD = 0xC0,\
+    ResetStyleCMD,\
     AddImageCMD,\
     ModifyImageCMD,\
     CreateButtonCMD,\
@@ -37,6 +42,7 @@
     /*Y = 0x40,*/\
     /* No Operands & Data */\
     ProtocolInfoACT = 0x80,\
+    CmdConfirmationACT,\
     /* Operands & Data */\
     /*Z = 0xC0,*/\
 };
@@ -173,8 +179,8 @@
     AlignBottomMid,\
     AlignBottomRight,\
     AlignLeftMid,\
-    AlignCenter,\
     AlignRightMid,\
+    AlignCenter,\
     AlignTransformPivot,\
     AlignTransformPivotAll,\
     AlignTransformPivotEvent,\
@@ -236,6 +242,17 @@
     PartCursor          = LV_PART_CURSOR,\
     PartCustomFirst     = LV_PART_CUSTOM_FIRST,\
     PartAny             = LV_PART_ANY,\
+};
+
+#define PROTOCOL_COLOR_FORMATS_ENUM enum ColorFormats {\
+    /*ColorFormatMono                 = LV_COLOR_FORMAT_I1,*/\
+    /*ColorFormatIndexed8             = LV_COLOR_FORMAT_I8,*/\
+    ColorFormatAlpha8               = LV_COLOR_FORMAT_A8,\
+    ColorFormatRGB16                = LV_COLOR_FORMAT_RGB565,\
+    /*ColorFormatRGB888               = LV_COLOR_FORMAT_RGB888,*/\
+    ColorFormatARGB32               = LV_COLOR_FORMAT_ARGB8888,\
+    ColorFormatRGB32                = LV_COLOR_FORMAT_XRGB8888,\
+    ColorFormatARGB32_Premultiplied = LV_COLOR_FORMAT_ARGB8888_PREMULTIPLIED,\
 };
 
 #endif //CONTROLPANELSOFTWARE_PROTOCOL_MACROS_H

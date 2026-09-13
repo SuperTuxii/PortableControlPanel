@@ -9,14 +9,7 @@ RowLayout {
     required property string attrKey
     property alias propName: textLabel.text
     property alias fontSize: textLabel.font.pointSize
-    property int directions: 4
-    property int min: 0
-    property int max: 10
     property alias value: textField.text
-    property list<int> numberValues: []
-    property bool valid: false
-    property var preprocessor: (string) => string
-    property var parser: (string) => Utils.parseDirectionsCalc(string, directions, min, max)
 
     spacing: 0
     uniformCellSizes: true
@@ -31,8 +24,8 @@ RowLayout {
     }
     TextField {
         id: textField
-        text: layout.min > 0 ? layout.min : 0
-        color: layout.valid ? Theme.labelWhite : Theme.labelRed
+        text: ""
+        color: Theme.labelWhite
         padding: 4
         horizontalAlignment: TextInput.AlignHCenter
         verticalAlignment: TextInput.AlignVCenter
@@ -83,23 +76,5 @@ RowLayout {
                 popup.bigTextBox.closed.connect(removeBindings);
             }
         }
-
-        Component.onCompleted: layout.revalidate()
-        onTextChanged: layout.revalidate()
-        onEditingFinished: layout.revalidate()
-
-        function validate() {
-            const value = layout.parser(layout.preprocessor(text));
-            if (value !== undefined)
-                layout.numberValues = value;
-            return value !== undefined;
-        }
-    }
-
-    onMinChanged: revalidate()
-    onMaxChanged: revalidate()
-
-    function revalidate(): void {
-        valid = textField.validate()
     }
 }

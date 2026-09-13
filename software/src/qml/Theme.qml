@@ -31,6 +31,10 @@ Item {
     property color buttonRedActive: "#b31212"
     property color buttonGreen: "#59ff59"
     property color buttonGreenActive: "#1fcc1f"
+    property color buttonBlue: "#40bfff"
+    property color buttonBlueActive: "#127db3"
+    property color buttonWhite: "#eeeeee"
+    property color buttonWhiteActive: "#b3b3b3"
 
     property color labelWhite: "#EEEEEE"
     property color labelRed: "#c34141"
@@ -52,14 +56,20 @@ Item {
     property real iconFontSize: 24
     property QtObject icons: QtObject {
         readonly property string add: "\ue145"
+        readonly property string edit: "\ue3c9"
         readonly property string trash: "\ue872"
         readonly property string remove: "\ue15b"
         readonly property string save: "\ue161"
+        readonly property string back: "\ue5c4"
         readonly property string connection: "\uf0c1"
         readonly property string noConnection: "\uf7b4"
         readonly property string brightness1: "\ue3aa"
         readonly property string brightness2: "\ue3ab"
         readonly property string brightness3: "\ue3ac"
+        readonly property string image: "\ue3f4"
+        readonly property string refresh: "\ue923"
+        readonly property string selectCheck: "\uf1fe"
+        readonly property string fullscreen: "\ue5d0"
     }
     property QtObject toast: QtObject {
         property color accentInfo: "#3498DB"

@@ -51,7 +51,6 @@ void LvglRenderer::componentComplete() {
     lv_display_set_flush_cb(display, &lvglFlushCallback);
     lv_display_set_default(display);
     screen = lv_obj_create(nullptr);
-    lv_obj_set_style_bg_color(screen, lv_color_black(), LV_PART_MAIN);
     lv_screen_load(screen);
     engine = qmlEngine(this);
     lvglImageProvider = new LvglImageProvider(*this);

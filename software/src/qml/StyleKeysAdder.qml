@@ -214,6 +214,7 @@ RowLayout {
         }
         onClicked: {
             popup.addStyleKeyValue(styleKeyComboBox.currentValue, styleKeyComboBox.currentText);
+            popup.scrollStyleToBottom();
         }
     }
 }

@@ -707,6 +707,9 @@ Popup {
             }
         }
     }
+    function scrollStyleToBottom(): void {
+        menuValueScroll.contentItem.contentY = menuValueScroll.contentItem.contentHeight - menuValueScroll.contentItem.height + 100;
+    }
 
     function buildMacros(): void {
         let sizePosData = { index: 0 };

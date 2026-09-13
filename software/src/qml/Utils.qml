@@ -31,10 +31,10 @@ QtObject {
     function parseIntCalc(string: string, min: int, max: int): variant {
         if (string.length === 0) return undefined;
         string = string.replace(/\s+/g, "");
-        if (!/^[\d+\-*/().]+$/.test(string))
+        if (!/^[\d+\-*/().?:<>=&|!]+$/.test(string))
             return undefined;
         try {
-            const value = Function("\"use strict\"; return (" + string + ")")();
+            const value = Math.floor(Function("\"use strict\"; return (" + string + ")")());
             if (isNaN(value) || value < min || value > max) return undefined;
             return value;
         } catch (e) {}
@@ -81,61 +81,71 @@ QtObject {
             }
         }
     }
-    function macroPreprocessor(macros, text: string, currentStyleSelector: int): string {
+    function macroPreprocessor(macros, text: string, currentStyleSelector: int, isDirection = false): string {
         if (!macros) return text;
-        return text.replace(/^([^d%]*\d+)d%(.*)$/, "$1w%$2;$1h%$2")
-            .replace(/(\d+)([wh])?%/g, (_, digits, modifier) => {
-                if (!modifier)
-                    return `(${digits}/100)*($(w)+$(h))/2`;
-                return `(${digits}/100)*$(${modifier})`;
-            }).replace(/\$[{(]([^)}:]+):?([^)}]*)[)}]/g, (_, key, modifierString) => {
-                key = key.toLowerCase();
-                let modifiers = {};
-                for (let modifier of modifierString.toLowerCase().split(",").map(modifier => modifier.split("="))) {
-                    if (!modifier[0]) continue;
-                    if (!modifier[1]) {
-                        modifiers[modifier[0]] = "";
-                        continue;
-                    }
-                    if (modifier[0] === "s" || modifier[0] === "state" || modifier[0] === "p" || modifier[0] === "part")
-                        modifier[1] = modifier[1].charAt(0).toUpperCase() + modifier[1].substring(1);
-                    modifiers[modifier[0]] = modifier[1];
+        if (isDirection)
+            text = text.replace(/(\d+p?)%/g, "$1d%");
+        return text.replace(/^(.*\d+p?)d%(.*)$/, "$1w%$2;$1h%$2")
+            .replace(/(\d+)(p?[wh]|\$[{(][^)}:]+:?[^)}]*[)}])?%/g, (_, digits, modifier) => {
+            if (!modifier)
+                return `(${digits}/100)*($(w)+$(h))/2`;
+            if (modifier === "p")
+                return `(${digits}/100)*($(w:p)+$(h:p))/2`;
+            return modifier.startsWith("$") ?
+                `(${digits}/100)*${modifier}` :
+                modifier.startsWith("p") ?
+                    `(${digits}/100)*$(${modifier.substring(1)}:p)` :
+                    `(${digits}/100)*$(${modifier})`;
+        }).replace(/\$[{(]([^)}:]+):?([^)}]*)[)}]/g, (_, key, modifierString) => {
+            key = key.toLowerCase();
+            let modifiers = {};
+            for (let modifier of modifierString.toLowerCase().split(",").map(modifier => modifier.split("="))) {
+                if (!modifier[0]) continue;
+                if (!modifier[1]) {
+                    modifiers[modifier[0]] = "";
+                    continue;
                 }
-                let styleSelector = currentStyleSelector;
-                if ("s" in modifiers || "state" in modifiers) {
-                    let state = Connection.styleStateFromString("state" in modifiers ? modifiers.state : modifiers.s);
-                    if (state !== -1)
-                        styleSelector = (styleSelector & 0xFF0000) | state;
-                }
-                if ("p" in modifiers || "part" in modifiers) {
-                    let part = Connection.stylePartFromString("part" in modifiers ? modifiers.part : modifiers.p);
-                    if (part !== -1)
-                        styleSelector = (styleSelector & 0xFFFF) | part;
-                }
-                if (key in macros) {
-                    return macros[key];
-                } else if ("style" in macros && styleSelector in macros.style && key in macros.style[styleSelector]) {
-                    let value = macros.style[styleSelector][key];
-                    if (typeof value !== "string" && value.length) {
-                        if ("x" in modifiers || "0" in modifiers || "v" in modifiers || "vertical" in modifiers
-                            || "t" in modifiers || "top" in modifiers)
-                            return value[0];
-                        else if ("y" in modifiers || "1" in modifiers || "h" in modifiers || "horizontal" in modifiers
-                            || "r" in modifiers || "right" in modifiers)
-                            return value.length >= 2 ? value[1] : value[0];
-                        else if ("2" in modifiers || "b" in modifiers || "bottom" in modifiers)
-                            return value.length === 4 ? value[2] : value[0];
-                        else if ("3" in modifiers || "l" in modifiers || "left" in modifiers)
-                            return value.length === 4 ? value[3] : value.length === 2 ? value[1] : value[0];
-                        else
-                            return value[0];
-                    } else {
-                        return value;
-                    }
+                if (modifier[0] === "s" || modifier[0] === "state" || modifier[0] === "p" || modifier[0] === "part")
+                    modifier[1] = modifier[1].charAt(0).toUpperCase() + modifier[1].substring(1);
+                modifiers[modifier[0]] = modifier[1];
+            }
+            let styleSelector = currentStyleSelector;
+            if ("s" in modifiers || "state" in modifiers) {
+                let state = Connection.styleStateFromString("state" in modifiers ? modifiers.state : modifiers.s);
+                if (state !== -1)
+                    styleSelector = (styleSelector & 0xFF0000) | state;
+            }
+            if (modifiers.p || "part" in modifiers) {
+                let part = Connection.stylePartFromString("part" in modifiers ? modifiers.part : modifiers.p);
+                if (part !== -1)
+                    styleSelector = (styleSelector & 0xFFFF) | part;
+            }
+            const usedMacros = ("p" in modifiers && !modifiers.p) || "parent" in modifiers ? macros.parent : macros;
+            if (!usedMacros) return "";
+            if (key in usedMacros) {
+                return usedMacros[key];
+            } else if ("style" in usedMacros && styleSelector in usedMacros.style && key in usedMacros.style[styleSelector]) {
+                let value = usedMacros.style[styleSelector][key];
+                if (typeof value !== "string" && value.length) {
+                    if ("x" in modifiers || "0" in modifiers || "v" in modifiers || "vertical" in modifiers
+                        || "t" in modifiers || "top" in modifiers)
+                        return value[0];
+                    else if ("y" in modifiers || "1" in modifiers || "h" in modifiers || "horizontal" in modifiers
+                        || "r" in modifiers || "right" in modifiers)
+                        return value.length >= 2 ? value[1] : value[0];
+                    else if ("2" in modifiers || "b" in modifiers || "bottom" in modifiers)
+                        return value.length === 4 ? value[2] : value[0];
+                    else if ("3" in modifiers || "l" in modifiers || "left" in modifiers)
+                        return value.length === 4 ? value[3] : value.length === 2 ? value[1] : value[0];
+                    else
+                        return value[0];
                 } else {
-                    return "";
+                    return value;
                 }
-            }).replace(/(\d+)°/g, "$1*10")
+            } else {
+                return "";
+            }
+        }).replace(/(\d+)°/g, "$1*10")
             .replace(/(\d+)x/g, "$1*256");
     }
     function refreshStyleData(macros, allStyleData): boolean {
@@ -153,25 +163,25 @@ QtObject {
             for (const styleData of allStyleData[styleSelector]) {
                 if (!("text" in styleData)) continue;
                 if (typeof styleData.value === "number") {
-                    let newValue = parseIntCalc(
+                    const newValue = parseIntCalc(
                         macroPreprocessor(macros, styleData.text, styleSelector),
                         getStyleKeyMin(styleData.attrKey),
                         getStyleKeyMax(styleData.attrKey)
                     );
-                    if (!newValue) continue;
+                    if (newValue === undefined) continue;
                     if (newValue !== styleData.value) {
                         macros.style[styleSelector][styleData.name.toLowerCase()] = newValue;
                         styleData.value = newValue;
                         changed = true;
                     }
                 } else if (styleData.value.length && typeof styleData.value !== "string") {
-                    let newValue = parseDirectionsCalc(
-                        macroPreprocessor(macros, styleData.text, styleSelector),
+                    const newValue = parseDirectionsCalc(
+                        macroPreprocessor(macros, styleData.text, styleSelector, true),
                         getStyleKeyDirections(styleData.attrKey),
                         getStyleKeyMin(styleData.attrKey),
                         getStyleKeyMax(styleData.attrKey)
                     );
-                    if (!newValue) continue;
+                    if (newValue === undefined) continue;
                     if (newValue.length !== styleData.value.length
                         || !newValue.every((value, index) => value === styleData.value[index])) {
                         macros.style[styleSelector][styleData.name.toLowerCase()] = newValue;
@@ -204,7 +214,7 @@ QtObject {
                 } else if (styleData.value.length && typeof styleData.value !== "string") {
                     const min = getStyleKeyMin(styleData.attrKey);
                     let newValue = parseDirectionsCalc(
-                        macroPreprocessor(macros, styleData.text, styleSelector),
+                        macroPreprocessor(macros, styleData.text, styleSelector, true),
                         getStyleKeyDirections(styleData.attrKey),
                         min,
                         getStyleKeyMax(styleData.attrKey)

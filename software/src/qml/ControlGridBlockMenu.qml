@@ -612,7 +612,7 @@ Popup {
                     directions: directions,
                     min: -(1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)),
                     max: (1 << (styleKeyValue <= Connection.NumberStyleKeyMax ? 31 : 15)) - 1,
-                    preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
+                    preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector, true),
                 });
             } else {
                 return addStyleValue("menuValues/IntMenuValue.qml", {
@@ -630,13 +630,13 @@ Popup {
                 colorPicker: popup.colorPicker
             });
         } else if (styleKeyValue >= Connection.ByteStyleKeyMin && styleKeyValue <= Connection.ByteStyleKeyMax) {
-            return addStyleValue("menuValues/IntMenuValue.qml", {
-                attrKey: styleKeyValue,
-                propName: styleKeyText,
-                min: 0,
-                max: (1 << 8) - 1,
-                preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
-            });
+                return addStyleValue("menuValues/IntMenuValue.qml", {
+                    attrKey: styleKeyValue,
+                    propName: styleKeyText,
+                    min: 0,
+                    max: (1 << 8) - 1,
+                    preprocessor: (string) => Utils.macroPreprocessor(macros, string, menuValueLayout.styleSelector),
+                });
         } else if (styleKeyValue >= Connection.NonTypeStyleKeyMin && styleKeyValue <= Connection.NonTypeStyleKeyMax) {
             if (styleKeyText.startsWith("Font")) {
                 return addStyleValue("menuValues/NonTypeMenuValue.qml", {

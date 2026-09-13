@@ -40,16 +40,17 @@ RowLayout {
         }
     }
 
-    onValueChanged: {
+    onValueChanged: checkValueModified()
+
+    function checkValueModified() {
         if (value !== comboBox.currentValue) {
             for (let i = 0; i < comboBox.count; i++) {
                 if (comboBox.valueAt(i) === value) {
                     comboBox.currentIndex = i;
-                    break;
+                    return;
                 }
             }
-            if (value !== comboBox.currentValue)
-                comboBox.currentIndex = -1;
+            comboBox.currentIndex = -1;
         }
     }
 }

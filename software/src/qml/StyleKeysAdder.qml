@@ -4,6 +4,7 @@ import QtQuick.Controls
 
 RowLayout {
     id: layout
+    signal addStyleKeyValue(styleKeyValue: int, styleKeyText: string)
     readonly property var structure: {
         "Transform": [
             { text: "Size", value: Connection.TransformWidth },
@@ -124,7 +125,7 @@ RowLayout {
 
     ComboBox {
         id: styleKeyComboBox
-        Layout.preferredWidth: (menuValueScroll.availableWidth - parent.spacing) - 30
+        Layout.preferredWidth: (layout.width - parent.spacing) - 30
         textRole: "text"
         valueRole: "value"
         model: []
@@ -212,9 +213,6 @@ RowLayout {
             border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
             border.width: Theme.buttonBorderWidth
         }
-        onClicked: {
-            popup.addStyleKeyValue(styleKeyComboBox.currentValue, styleKeyComboBox.currentText);
-            popup.scrollStyleToBottom();
-        }
+        onClicked: layout.addStyleKeyValue(styleKeyComboBox.currentValue, styleKeyComboBox.currentText)
     }
 }

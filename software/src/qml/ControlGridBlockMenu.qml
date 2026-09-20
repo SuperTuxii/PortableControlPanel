@@ -142,7 +142,7 @@ Popup {
                 visible: subWidgetsScroll.subIndex === 0
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
-                onValueChanged: {
+                onNumberValueChanged: {
                     configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
                     updateDemoDisplayLive();
                 }
@@ -156,7 +156,7 @@ Popup {
                 visible: subWidgetsScroll.subIndex === 0
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
-                onValueChanged: {
+                onNumberValueChanged: {
                     configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
                     updateDemoDisplayLive();
                 }

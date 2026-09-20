@@ -145,20 +145,11 @@ void lv_control_grid_test_fill(const lv_control_grid_t *cg) {
             lv_obj_t* obj = lv_button_create(cg->gridContainer);
             lv_obj_set_grid_cell(obj, LV_GRID_ALIGN_STRETCH, column, 1,
                                  LV_GRID_ALIGN_STRETCH, row, 1);
-
-            if (((row * cg->columnCount) + column) % 2 == 0) {
-                lv_obj_t* label = lv_label_create(obj);
-                lv_label_set_text_fmt(label, "c%d, r%d", column, row);
-                lv_obj_set_align(label, LV_ALIGN_BOTTOM_RIGHT);
-                lv_obj_set_style_text_font(label, &lv_font_montserrat_48, LV_PART_MAIN);
-                lv_obj_set_style_transform_scale(label, 75, LV_PART_MAIN);
-                lv_obj_add_event_cb(label, alignPivotForScaleCB, LV_EVENT_SIZE_CHANGED, nullptr);
-            } else {
-                lv_obj_t* label = lv_label_create(obj);
-                lv_label_set_text_fmt(label, "c%d, r%d", column, row);
-                lv_obj_set_align(label, LV_ALIGN_BOTTOM_RIGHT);
-                lv_obj_set_style_text_font(label, &lv_font_montserrat_14, LV_PART_MAIN);
-            }
+            lv_obj_set_style_opa(obj, 150, LV_PART_MAIN);
+            lv_obj_t* label = lv_label_create(obj);
+            lv_label_set_text_fmt(label, "c%d, r%d", column, row);
+            lv_obj_set_align(label, LV_ALIGN_BOTTOM_RIGHT);
+            lv_obj_set_style_text_font(label, &lv_font_montserrat_14, LV_PART_MAIN);
         }
     }
 }

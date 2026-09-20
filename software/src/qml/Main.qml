@@ -15,6 +15,7 @@ Window {
 
     Settings {
         id: settings
+        property string defaultLayout: "{\"rows\": 3, \"columns\": 5, \"outerPad\": 5, \"rowPad\": 5, \"columnPad\": 5, \"blocks\": []}"
         property string layoutData: "{}"
         property string imageData: "{}"
         property alias backlightBrightness: brightnessSlider.value
@@ -24,7 +25,7 @@ Window {
                 return;
             let configData = JSON.parse(layoutData);
             if (!(name in configData))
-                configData[name] = { rows: 3, columns: 5, blocks: [] };
+                configData[name] = JSON.parse(defaultLayout);
             Object.assign(configData[name], data);
             layoutData = JSON.stringify(configData);
         }
@@ -38,14 +39,14 @@ Window {
         function saveBlock(layoutName: string, data: variant): void {
             let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
-                configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
+                configData[layoutName] = JSON.parse(defaultLayout);
             configData[layoutName].blocks.push(data);
             layoutData = JSON.stringify(configData);
         }
         function editBlock(layoutName: string, row: int, column: int, data: variant): void {
             let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
-                configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
+                configData[layoutName] = JSON.parse(defaultLayout);
             for (let block of configData[layoutName].blocks) {
                 if (row - block.row >= 0 && row - block.row < block.rowSpan
                     && column - block.column >= 0 && column - block.column < block.columnSpan) {
@@ -59,7 +60,7 @@ Window {
         function removeBlock(layoutName: string, row: int, column: int): void {
             let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
-                configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
+                configData[layoutName] = JSON.parse(defaultLayout);
             for (let i in configData[layoutName].blocks) {
                 let block = configData[layoutName].blocks[i];
                 if (row - block.row >= 0 && row - block.row < block.rowSpan
@@ -74,7 +75,7 @@ Window {
         function loadBlocks(layoutName: string, createCall: variant): void {
             let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
-                configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
+                configData[layoutName] = JSON.parse(defaultLayout);
             for (let block of configData[layoutName].blocks) {
                 createCall(block);
             }
@@ -82,7 +83,7 @@ Window {
         function loadBlock(layoutName: string, row: int, column: int): variant {
             let configData = JSON.parse(layoutData);
             if (!(layoutName in configData))
-                configData[layoutName] = { rows: 3, columns: 5, blocks: [] };
+                configData[layoutName] = JSON.parse(defaultLayout);
             for (let block of configData[layoutName].blocks) {
                 if (row - block.row >= 0 && row - block.row < block.rowSpan
                     && column - block.column >= 0 && column - block.column < block.columnSpan)
@@ -92,7 +93,7 @@ Window {
         }
         function loadLayout(name: string): variant {
             let configData = JSON.parse(layoutData);
-            return name in configData ? configData[name] : { rows: 3, columns: 5, blocks: [] };
+            return name in configData ? configData[name] : JSON.parse(defaultLayout);
         }
 
         function saveImage(file: string, data: variant): void {

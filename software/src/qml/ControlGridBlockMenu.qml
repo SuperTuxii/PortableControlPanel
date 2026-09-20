@@ -59,8 +59,7 @@ Popup {
                 LvglDisplay {
                     id: demoDisplayPanel
                     name: "DemoBlockDisplay"
-                    implicitWidth: 225
-                    implicitHeight: 125
+                    scale: 0.275
                     anchors.centerIn: parent
                     Component.onCompleted: popup.controlGrid.displayPanel.displaySizeRefreshed.connect(() => {
                         demoDisplayPanel.changeDisplaySize(

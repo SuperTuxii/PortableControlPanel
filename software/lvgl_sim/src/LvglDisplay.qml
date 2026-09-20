@@ -9,8 +9,9 @@ Item {
     property alias tickPeriod: lvglRenderer.tickPeriod
     property alias displayBufferRatio: lvglRenderer.displayBufferRatio
     property rect imageClipRect: Qt.rect(0, 0, displayWidth, displayHeight)
-    implicitWidth: displayWidth
-    implicitHeight: displayHeight
+    property real scale: 1.0
+    implicitWidth: displayWidth * scale
+    implicitHeight: displayHeight * scale
     clip: true
 
 

@@ -114,16 +114,6 @@ Popup {
                 Layout.maximumHeight: 30
             }
             IntMenuValue {
-                id: rowMenuValue
-                attrKey: "row"
-                propName: "Row"
-                min: 0
-                max: popup.rows - 1
-                visible: subWidgetsScroll.subIndex === 0
-                Layout.minimumHeight: 30
-                Layout.maximumHeight: 30
-            }
-            IntMenuValue {
                 id: columnMenuValue
                 attrKey: "column"
                 propName: "Column"
@@ -134,11 +124,21 @@ Popup {
                 Layout.maximumHeight: 30
             }
             IntMenuValue {
-                id: rowSpanMenuValue
-                attrKey: "rowSpan"
-                propName: "Row Span"
+                id: rowMenuValue
+                attrKey: "row"
+                propName: "Row"
+                min: 0
+                max: popup.rows - 1
+                visible: subWidgetsScroll.subIndex === 0
+                Layout.minimumHeight: 30
+                Layout.maximumHeight: 30
+            }
+            IntMenuValue {
+                id: columnSpanMenuValue
+                attrKey: "columnSpan"
+                propName: "Column Span"
                 min: 1
-                max: popup.rows - rowMenuValue.numberValue
+                max: popup.columns - columnMenuValue.numberValue
                 visible: subWidgetsScroll.subIndex === 0
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
@@ -148,11 +148,11 @@ Popup {
                 }
             }
             IntMenuValue {
-                id: columnSpanMenuValue
-                attrKey: "columnSpan"
-                propName: "Column Span"
+                id: rowSpanMenuValue
+                attrKey: "rowSpan"
+                propName: "Row Span"
                 min: 1
-                max: popup.columns - columnMenuValue.numberValue
+                max: popup.rows - rowMenuValue.numberValue
                 visible: subWidgetsScroll.subIndex === 0
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30

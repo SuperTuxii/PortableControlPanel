@@ -58,7 +58,7 @@ Popup {
 
                 LvglDisplay {
                     id: demoDisplayPanel
-                    name: "DemoDisplay"
+                    name: "DemoBlockDisplay"
                     implicitWidth: 225
                     implicitHeight: 125
                     anchors.centerIn: parent
@@ -516,8 +516,9 @@ Popup {
                     subWidgetsScroll.value[i-1];
             if (subWidget.type === "Image" && subWidget.image && subWidget.image.imageKey)
                 images.add(subWidget.image.imageKey);
-            for (const styleSelector in subWidget.style) {
-                for (const styleElement of subWidget.style[styleSelector]) {
+            const subWidgetStyleData = subWidgetsScroll.subIndex === i ? styleDataView.styleData : subWidget.style;
+            for (const styleSelector in subWidgetStyleData) {
+                for (const styleElement of subWidgetStyleData[styleSelector]) {
                     if (styleElement.attrKey === Connection.BackgroundImageIndex
                         && styleElement.value && styleElement.value.imageKey && styleElement.value.imageKey.length > 1)
                         images.add(styleElement.value.imageKey);

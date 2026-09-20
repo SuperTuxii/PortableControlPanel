@@ -10,7 +10,12 @@ QImage CachedImageProvider::requestImage(const QString& id, QSize* size, const Q
     const qsizetype attrDelimiter = id.lastIndexOf("?");
     const QString path = settingsDir.absoluteFilePath(id.sliced(0, attrDelimiter));
     QStringList attrs = id.sliced(attrDelimiter + 1).split(",", Qt::SkipEmptyParts);
-    QRect cropRect(0, 0, requestedSize.width(), requestedSize.height());
+    QImage image(path);
+    if (requestedSize.width() <= 0 || requestedSize.height() <= 0)
+        *size = image.size();
+    else
+        *size = requestedSize;
+    QRect cropRect(0, 0, size->width(), size->height());
     QImage::Format colorFormat = QImage::Format_Invalid;
     for (const QString& attr : attrs) {
         if (!attr.contains("=")) continue;
@@ -42,9 +47,8 @@ QImage CachedImageProvider::requestImage(const QString& id, QSize* size, const Q
         }
     }
 
-    QImage image = QImage(path).copy(cropRect).scaled(requestedSize);
+    image = image.copy(cropRect).scaled(*size);
     if (colorFormat > QImage::Format_Invalid)
         image.convertTo(colorFormat);
-    *size = requestedSize;
     return image;
 }

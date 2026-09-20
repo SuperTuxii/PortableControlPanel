@@ -353,10 +353,16 @@ Window {
                 displayPanel.changeDisplaySize(width, height);
         });
         Connection.imageCached.connect((url, filename, path) => {
+            const imageSize = Connection.imageSize(path);
+            const data = {
+                url: url,
+                path: path,
+                initialSize: [imageSize.width, imageSize.height]
+            }
             if (settings.loadImage(filename))
-                settings.editImage(filename, {url, path});
+                settings.editImage(filename, data);
             else
-                settings.saveImage(filename, {url, path});
+                settings.saveImage(filename, data);
         });
     }
 

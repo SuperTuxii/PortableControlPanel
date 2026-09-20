@@ -52,14 +52,15 @@ bool ConnectionWorker::isConnected() const {
 }
 
 bool ConnectionWorker::checkConfirmation() {
+    constexpr int timeout = 500;
     int8_t action = 0;
     uint8_t dataLength = 0;
     QByteArray data;
-    if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(100)) goto confirmationFailure;
+    if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(timeout)) goto confirmationFailure;
     serialPort.read(reinterpret_cast<char*>(&action), 1);
-    if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(100)) goto confirmationFailure;
+    if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(timeout)) goto confirmationFailure;
     serialPort.read(reinterpret_cast<char*>(&dataLength), 1);
-    while (serialPort.bytesAvailable() <= dataLength) if (!serialPort.waitForReadyRead(100)) break;
+    while (serialPort.bytesAvailable() <= dataLength) if (!serialPort.waitForReadyRead(timeout)) break;
     if (serialPort.bytesAvailable() <= dataLength) goto confirmationFailure;
     data = serialPort.read(dataLength+1);
     if (data == QByteArray::fromRawData(reinterpret_cast<const char*>(writeBuffer), dataLength+1)) return true;

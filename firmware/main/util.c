@@ -74,12 +74,12 @@ void freeUserDataOnDelete(lv_event_t *event) {
     lv_user_data_t *list = lv_obj_get_user_data(object);
     if (lv_event_get_code(event) != LV_EVENT_DELETE || list == nullptr) return;
     lv_user_data_node_t *node = list->head;
-    do {
+    while (node != nullptr) {
         lv_user_data_node_t* next = node->next;
         free(node->data);
         free(node);
         node = next;
-    } while (node != nullptr);
+    }
     free(list);
     lv_obj_set_user_data(object, nullptr);
 }

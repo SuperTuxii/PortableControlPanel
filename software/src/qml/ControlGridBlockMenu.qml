@@ -685,7 +685,7 @@ Popup {
             }
             menuValue.value = subWidgetsView.model[index][menuValue.attrKey];
         }
-        styleDataView.styleData = Qt.binding(() => subWidgetsView.model[index].style);
+        styleDataView.styleData = subWidgetsView.model[index].style;
     }
 
     function returnToMainWidget(): void {

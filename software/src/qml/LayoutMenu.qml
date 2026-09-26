@@ -48,13 +48,15 @@ Popup {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.minimumHeight: childrenRect.height + 2 * Theme.borderWidth
-                Layout.minimumWidth: childrenRect.width
                 Layout.maximumHeight: childrenRect.height + 50
 
                 LvglDisplay {
                     id: demoDisplayPanel
+                    property real fitWidth: demoDisplay.width - 50
+                    property real fitHeight: Math.max(150, (popup.height / 2.75) - 50)
                     name: "DemoLayoutDisplay"
-                    scale: 0.3
+                    implicitWidth: imageClipRect.width / imageClipRect.height * fitHeight < fitWidth ? imageClipRect.width / imageClipRect.height * fitHeight : fitWidth
+                    implicitHeight: imageClipRect.width / imageClipRect.height * fitHeight > fitWidth ? imageClipRect.height / imageClipRect.width * fitWidth : fitHeight
                     anchors.centerIn: parent
                     Component.onCompleted: popup.controlGrid.displayPanel.displaySizeRefreshed.connect(() => {
                         demoDisplayPanel.changeDisplaySize(

@@ -53,13 +53,15 @@ Popup {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.minimumHeight: childrenRect.height + 2 * Theme.borderWidth
-                Layout.minimumWidth: childrenRect.width
                 Layout.maximumHeight: childrenRect.height + 50
 
                 LvglDisplay {
                     id: demoDisplayPanel
+                    property real fitWidth: demoDisplay.width - 50
+                    property real fitHeight: Math.max(125, (popup.height / 3.25) - 50)
                     name: "DemoBlockDisplay"
-                    scale: 0.275
+                    implicitWidth: imageClipRect.width / imageClipRect.height * fitHeight < fitWidth ? imageClipRect.width / imageClipRect.height * fitHeight : fitWidth
+                    implicitHeight: imageClipRect.width / imageClipRect.height * fitHeight > fitWidth ? imageClipRect.height / imageClipRect.width * fitWidth : fitHeight
                     anchors.centerIn: parent
                     Component.onCompleted: popup.controlGrid.displayPanel.displaySizeRefreshed.connect(() => {
                         demoDisplayPanel.changeDisplaySize(
@@ -471,13 +473,6 @@ Popup {
             (((controlGrid.controlGridWidth + controlGrid.columnPad) / columns) * columnSpan) + controlGrid.columnPad,
             (((controlGrid.controlGridHeight + controlGrid.rowPad) / rows) * rowSpan) + controlGrid.rowPad
         );
-        if (demoDisplayPanel.imageClipRect.width / demoDisplayPanel.imageClipRect.height * 125 <= 225) {
-            demoDisplayPanel.implicitWidth = demoDisplayPanel.imageClipRect.width / demoDisplayPanel.imageClipRect.height * 125;
-            demoDisplayPanel.implicitHeight = 125;
-        } else {
-            demoDisplayPanel.implicitWidth = 225;
-            demoDisplayPanel.implicitHeight = demoDisplayPanel.imageClipRect.height / demoDisplayPanel.imageClipRect.width * 225;
-        }
     }
 
     function loadDemoDisplay(rowSpan: int, columnSpan: int): void {

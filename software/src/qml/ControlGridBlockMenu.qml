@@ -500,10 +500,11 @@ Popup {
     }
 
     function configureDemoDisplayCrop(row: int, column: int, rowSpan: int, columnSpan: int): void {
-        const outerPad = (demoDisplayPanel.displayWidth - controlGrid.controlGridWidth) / 2;
         demoDisplayPanel.imageClipRect = Qt.rect(
-            outerPad + (((controlGrid.controlGridWidth + controlGrid.columnPad) / columns) * column) - controlGrid.columnPad,
-            outerPad + (((controlGrid.controlGridHeight + controlGrid.rowPad) / rows) * row) - controlGrid.rowPad,
+            ((demoDisplayPanel.displayWidth - controlGrid.controlGridWidth) / 2)
+             + (((controlGrid.controlGridWidth + controlGrid.columnPad) / columns) * column) - controlGrid.columnPad,
+            ((demoDisplayPanel.displayHeight - controlGrid.controlGridHeight) / 2)
+             + (((controlGrid.controlGridHeight + controlGrid.rowPad) / rows) * row) - controlGrid.rowPad,
             (((controlGrid.controlGridWidth + controlGrid.columnPad) / columns) * columnSpan) + controlGrid.columnPad,
             (((controlGrid.controlGridHeight + controlGrid.rowPad) / rows) * rowSpan) + controlGrid.rowPad
         );

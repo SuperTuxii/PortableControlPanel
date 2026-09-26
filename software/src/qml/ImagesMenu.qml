@@ -310,6 +310,53 @@ Popup {
             anchors.margins: Theme.borderRadius
 
             Label {
+                text: "Presets:"
+                visible: popup.selectable
+                font.pointSize: 13
+                font.underline: true
+                verticalAlignment: Text.AlignVCenter
+                horizontalAlignment: Text.AlignHCenter
+                Layout.fillWidth: true
+                Layout.fillHeight: false
+                Layout.bottomMargin: 5
+            }
+            ComboBox {
+                id: presetsComboBox
+                readonly property string attrKey: "preset"
+                property alias value: presetsComboBox.currentValue
+                visible: popup.selectable
+                Layout.preferredHeight: 30
+                Layout.fillWidth: true
+                model: ["Custom", "Image Config", "Fill Widget", "Fit Widget", "Cover Widget"]
+                background: Rectangle {
+                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                    radius: Theme.buttonRadius
+                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                    border.width: Theme.buttonBorderWidth
+                }
+                onCurrentValueChanged: updatePreset()
+
+                function updatePreset(): void {
+                    resizeMenuValue.enabled = currentIndex <= 0;
+                    cropPosMenuValue.enabled = currentIndex !== 1;
+                    cropSizeMenuValue.enabled = currentIndex !== 1;
+                    colorFormatMenuValue.enabled = currentIndex !== 1;
+                    if (currentValue === "Image Config") {
+                        const imageData = popup.settings.loadImage(popup.selected.key);
+                        cropPosMenuValue.value = imageData.cropPosText;
+                        cropSizeMenuValue.value = imageData.cropSizeText;
+                        resizeMenuValue.value = imageData.resizeText;
+                        colorFormatMenuValue.value = imageData.colorFormat;
+                    } else if (currentValue === "Fill Widget") {
+                        resizeMenuValue.value = "$(ww);$(wh)";
+                    } else if (currentValue === "Fit Widget") {
+                        resizeMenuValue.value = "($(ww)/$(w)) < ($(wh)/$(h)) ?\n$(ww) :\n$(w)*($(wh)/$(h));\n\n($(ww)/$(w)) < ($(wh)/$(h)) ?\n$(h)*($(ww)/$(w)) :\n$(wh)";
+                    } else if (currentValue === "Cover Widget") {
+                        resizeMenuValue.value = "($(ww)/$(w)) > ($(wh)/$(h)) ?\n$(ww) :\n$(w)*($(wh)/$(h));\n\n($(ww)/$(w)) > ($(wh)/$(h)) ?\n$(h)*($(ww)/$(w)) :\n$(wh)";
+                    }
+                }
+            }
+            Label {
                 text: "Crop:"
                 font.pointSize: 13
                 font.underline: true
@@ -453,6 +500,7 @@ Popup {
             }
 
             function resetMenuValues() {
+                presetsComboBox.currentIndex = 0;
                 cropPosMenuValue.value = "0";
                 cropSizeMenuValue.value = "100%";
                 resizeMenuValue.value = "100%";
@@ -489,6 +537,7 @@ Popup {
                         menuValue.value = data[menuValue.attrKey];
                     }
                 }
+                presetsComboBox.updatePreset();
             }
         }
     }
@@ -498,14 +547,16 @@ Popup {
             popup.selected = undefined;
             popup.selectedObject = undefined;
         } else if (selected) {
-            const index = imagesView.model.findIndex(obj => obj.key === popup.selected.key);
-            if (index < 0) return;
-            const object = imagesView.itemAtIndex(index);
-            if (!object) return;
-            const selected = popup.selected;
-            popup.selected = undefined;
-            object.select();
-            modLayout.loadMenuValues(selected, false);
+            Qt.callLater(() => {
+                const index = imagesView.model.findIndex(obj => obj.key === popup.selected.key);
+                if (index < 0) return;
+                const object = imagesView.itemAtIndex(index);
+                if (!object) return;
+                const selected = popup.selected;
+                popup.selected = undefined;
+                object.select();
+                modLayout.loadMenuValues(selected, false);
+            });
         }
     }
     onClosed: {

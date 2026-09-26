@@ -37,6 +37,7 @@ RowLayout {
             border.color: Theme.textFieldBorder
             radius: Theme.textFieldRadius
         }
+        onEnabledChanged: color.a = enabled ? 1.0 : 0.3
 
         Button {
             id: bigBoxButton

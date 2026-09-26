@@ -44,6 +44,7 @@ RowLayout {
             border.color: Theme.textFieldBorder
             radius: Theme.textFieldRadius
         }
+        onEnabledChanged: color.a = enabled ? 1.0 : 0.3
 
         Button {
             id: bigBoxButton
@@ -88,7 +89,7 @@ RowLayout {
         onTextChanged: layout.revalidate()
         onEditingFinished: layout.revalidate()
 
-        function validate() {
+        function validate(): bool {
             const value = layout.parser(layout.preprocessor(text));
             if (value !== undefined)
                 layout.numberValues = value;

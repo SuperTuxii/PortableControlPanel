@@ -62,7 +62,7 @@ public slots:
     void removeScreenStyles() const;
     void setLayout(int rows, int columns);
     void testFill() const;
-    void clear();
+    void clear() const;
     void move(uint8_t fromIndex, uint8_t toIndex) const;
     void changeSize(uint8_t index, uint8_t index2) const;
     void remove(uint8_t index, uint8_t subIndex) const;

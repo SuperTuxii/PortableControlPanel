@@ -300,7 +300,6 @@ Popup {
         failLabel.visible = false;
         colorPicker.x = Qt.binding(() => Math.min(Overlay.overlay.width - colorPicker.width, popup.x + popup.width));
         colorPicker.y = Qt.binding(() => popup.y + (popup.height - colorPicker.height) / 2);
-        demoControlGrid.clearImages();
         demoControlGrid.removeScreenStyles();
         loadLayout();
         symbolListMenu.close();

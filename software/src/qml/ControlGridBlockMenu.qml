@@ -17,6 +17,7 @@ Popup {
     property bool newBlock
     property int row
     property int column
+    property int index
     property int rows: controlGrid.rows
     property int columns: controlGrid.columns
     property var blockStyleData: {}
@@ -124,6 +125,15 @@ Popup {
                 visible: subWidgetsScroll.subIndex === 0
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
+                onNumberValueChanged: {
+                    configureDemoDisplayCrop(
+                        rowMenuValue.numberValue,
+                        columnMenuValue.numberValue,
+                        rowSpanMenuValue.numberValue,
+                        columnSpanMenuValue.numberValue
+                    );
+                    updateDemoDisplayLive();
+                }
             }
             IntMenuValue {
                 id: rowMenuValue
@@ -134,6 +144,15 @@ Popup {
                 visible: subWidgetsScroll.subIndex === 0
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
+                onNumberValueChanged: {
+                    configureDemoDisplayCrop(
+                        rowMenuValue.numberValue,
+                        columnMenuValue.numberValue,
+                        rowSpanMenuValue.numberValue,
+                        columnSpanMenuValue.numberValue
+                    );
+                    updateDemoDisplayLive();
+                }
             }
             IntMenuValue {
                 id: columnSpanMenuValue
@@ -145,7 +164,12 @@ Popup {
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
                 onNumberValueChanged: {
-                    configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
+                    configureDemoDisplayCrop(
+                        rowMenuValue.numberValue,
+                        columnMenuValue.numberValue,
+                        rowSpanMenuValue.numberValue,
+                        columnSpanMenuValue.numberValue
+                    );
                     updateDemoDisplayLive();
                 }
             }
@@ -159,7 +183,12 @@ Popup {
                 Layout.minimumHeight: 30
                 Layout.maximumHeight: 30
                 onNumberValueChanged: {
-                    configureDemoDisplayCrop(rowSpanMenuValue.numberValue, columnSpanMenuValue.numberValue);
+                    configureDemoDisplayCrop(
+                        rowMenuValue.numberValue,
+                        columnMenuValue.numberValue,
+                        rowSpanMenuValue.numberValue,
+                        columnSpanMenuValue.numberValue
+                    );
                     updateDemoDisplayLive();
                 }
             }
@@ -446,19 +475,23 @@ Popup {
         failLabel.visible = false;
         colorPicker.x = Qt.binding(() => Math.min(Overlay.overlay.width - colorPicker.width, popup.x + popup.width));
         colorPicker.y = Qt.binding(() => popup.y + (popup.height - colorPicker.height) / 2);
-        let blockData = newBlock ? undefined : settings.loadBlock(controlGrid.layoutName, row, column);
+        const blockData = newBlock ? undefined : settings.loadBlock(controlGrid.layoutName, popup.row, popup.column);
+        const row = blockData ? blockData.row : popup.row;
+        const column = blockData ? blockData.column : popup.column;
+        const rowSpan = blockData ? blockData.rowSpan : 1;
+        const columnSpan = blockData ? blockData.columnSpan : 1;
         if (blockData !== undefined)
             typeMenuValue.value = blockData["type"];
         else
             typeMenuValue.value = popup.blockTypes[0];
+        demoControlGrid.removeScreenStyles();
         demoControlGrid.setLayout(rows, columns);
         demoControlGrid.outerPad = controlGrid.outerPad;
         demoControlGrid.rowPad = controlGrid.rowPad;
         demoControlGrid.columnPad = controlGrid.columnPad;
-        demoControlGrid.clearImages();
         loadBlock(blockData);
-        configureDemoDisplayCrop(blockData ? blockData.rowSpan : 1, blockData ? blockData.columnSpan : 1);
-        loadDemoDisplay(blockData ? blockData.rowSpan : 1, blockData ? blockData.columnSpan : 1);
+        configureDemoDisplayCrop(row, column, rowSpan, columnSpan);
+        loadDemoDisplay(rowSpan, columnSpan);
     }
 
     onClosed: {
@@ -466,37 +499,53 @@ Popup {
         demoControlGrid.clear();
     }
 
-    function configureDemoDisplayCrop(rowSpan: int, columnSpan: int): void {
+    function configureDemoDisplayCrop(row: int, column: int, rowSpan: int, columnSpan: int): void {
+        const outerPad = (demoDisplayPanel.displayWidth - controlGrid.controlGridWidth) / 2;
         demoDisplayPanel.imageClipRect = Qt.rect(
-            ((demoDisplayPanel.displayWidth - controlGrid.controlGridWidth) / 2) - controlGrid.columnPad,
-            ((demoDisplayPanel.displayHeight - controlGrid.controlGridHeight) / 2) - controlGrid.rowPad,
+            outerPad + (((controlGrid.controlGridWidth + controlGrid.columnPad) / columns) * column) - controlGrid.columnPad,
+            outerPad + (((controlGrid.controlGridHeight + controlGrid.rowPad) / rows) * row) - controlGrid.rowPad,
             (((controlGrid.controlGridWidth + controlGrid.columnPad) / columns) * columnSpan) + controlGrid.columnPad,
             (((controlGrid.controlGridHeight + controlGrid.rowPad) / rows) * rowSpan) + controlGrid.rowPad
         );
     }
 
     function loadDemoDisplay(rowSpan: int, columnSpan: int): void {
-        demoControlGrid.remove(0, 0);
-        demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpan-1) * columns) + (columnSpan-1));
+        demoControlGrid.clear();
+        updateImagesLive();
+        if (controlGrid.layoutData.style) {
+            for (const styleSelector in controlGrid.layoutData.style) {
+                demoControlGrid.setScreenStyle(styleSelector, controlGrid.layoutData.style[styleSelector]);
+            }
+        }
+        demoControlGrid.addWidget(typeMenuValue.value, index, index + ((rowSpan-1) * columns) + (columnSpan-1));
         for (const styleSelector in blockStyleData) {
-            demoControlGrid.setStyle(0, 0, styleSelector, blockStyleData[styleSelector]);
+            demoControlGrid.setStyle(index, 0, styleSelector, blockStyleData[styleSelector]);
         }
         for (let i = 0; i < subWidgetsScroll.value.length; i++) {
             const subWidget = subWidgetsScroll.value[i];
             if (subWidget.type === "Image" && (!("image" in subWidget) || !("imageKey" in subWidget.image)
                 || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
-            const subIndex = demoControlGrid.subWidget(subWidget.type, 0, 0, subWidget);
+            const subIndex = demoControlGrid.subWidget(subWidget.type, index, 0, subWidget);
             if (subIndex !== i+1) {
                 console.error(`Expected Sub Widget to placed at index ${i+1}, but was placed at ${subIndex}`);
                 return;
             }
             for (const styleSelector in subWidget.style) {
-                demoControlGrid.setStyle(0, subIndex, styleSelector, subWidget.style[styleSelector]);
+                demoControlGrid.setStyle(index, subIndex, styleSelector, subWidget.style[styleSelector]);
             }
         }
     }
     function updateImagesLive(): void {
         let images = new Set();
+        if (controlGrid.layoutData.style) {
+            for (const styleSelector in controlGrid.layoutData.style) {
+                for (const styleElement of controlGrid.layoutData.style[styleSelector]) {
+                    if (styleElement.attrKey === Connection.BackgroundImageIndex
+                        && styleElement.value && styleElement.value.imageKey && styleElement.value.imageKey.length > 1)
+                        images.add(styleElement.value.imageKey);
+                }
+            }
+        }
         for (const styleSelector in blockStyleData) {
             for (const styleElement of blockStyleData[styleSelector]) {
                 if (styleElement.attrKey === Connection.BackgroundImageIndex
@@ -521,16 +570,39 @@ Popup {
         }
         demoControlGrid.loadImages(Array.from(images));
     }
+    function updateSubWidgetMacros(): void {
+        const index = columnMenuValue.numberValue + (rowMenuValue.numberValue * columns);
+        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
+            const subWidget = subWidgetsScroll.value[i];
+            let subSizePosData = { index: index, subIndex: i+1 };
+            demoControlGrid.insertCoordsData(subSizePosData);
+            const subMacros = {};
+            Utils.buildMacros(
+                subMacros, subWidget.style,
+                subSizePosData.width, subSizePosData.height,
+                data.row, data.column,
+                data.rowSpan, data.columnSpan
+            );
+            subMacros.parent = styleDataView.macros;
+            if (Utils.refreshSubWidget(subMacros, subWidget)) {
+                if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
+                const subIndex = demoControlGrid.subWidget(subWidget.type, index, i+1, subWidget);
+                if (subIndex !== i+1) return;
+            }
+        }
+    }
     function updateDemoDisplayLive(): void {
         if (!popup.visible) return;
-        demoControlGrid.remove(0, 0);
-        demoControlGrid.addWidget(typeMenuValue.value, 0, ((rowSpanMenuValue.numberValue-1) * columns) + (columnSpanMenuValue.numberValue-1));
+        demoControlGrid.clear();
+        const fromIndex = columnMenuValue.numberValue + (rowMenuValue.numberValue * columns);
+        const toIndex = fromIndex + ((rowSpanMenuValue.numberValue-1) * columns) + (columnSpanMenuValue.numberValue-1);
+        demoControlGrid.addWidget(typeMenuValue.value, fromIndex, toIndex);
         for (let i = 0; i < subWidgetsScroll.value.length; i++) {
             const subWidget = subWidgetsScroll.subIndex === i + 1 ?
                 Object.assign({}, subWidgetsScroll.value[i], subWidgetValueLoader.data) :
                 subWidgetsScroll.value[i];
             if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
-            const subIndex = demoControlGrid.subWidget(subWidget.type, 0, 0, subWidget);
+            const subIndex = demoControlGrid.subWidget(subWidget.type, fromIndex, 0, subWidget);
             if (subIndex !== i + 1) {
                 console.error(`Expected Sub Widget to placed at index ${i + 1}, but was placed at ${subIndex}`);
                 return;
@@ -539,10 +611,12 @@ Popup {
 
         buildMacros();
         styleDataView.revalidateStyleValue();
+        if (subWidgetsScroll.subIndex === 0)
+            updateSubWidgetMacros();
         updateImagesLive();
 
         for (const styleSelector in blockStyleData) {
-            demoControlGrid.setStyle(0, 0, styleSelector, blockStyleData[styleSelector]);
+            demoControlGrid.setStyle(fromIndex, 0, styleSelector, blockStyleData[styleSelector]);
         }
         for (let i = 0; i < subWidgetsScroll.value.length; i++) {
             const subIndex = i + 1;
@@ -552,12 +626,13 @@ Popup {
             if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
             const subWidgetStyleData = subWidgetsScroll.subIndex === subIndex ? styleDataView.styleData : subWidget.style;
             for (const styleSelector in subWidgetStyleData) {
-                demoControlGrid.setStyle(0, subIndex, styleSelector, subWidgetStyleData[styleSelector]);
+                demoControlGrid.setStyle(fromIndex, subIndex, styleSelector, subWidgetStyleData[styleSelector]);
             }
         }
     }
     function loadBlock(data): void {
         if (!newBlock) {
+            index = data.column + (data.row * columns);
             blockStyleData = data.style ?? {};
             styleDataView.styleData = Qt.binding(() => blockStyleData);
             for (let menuValue of rightLayout.children) {
@@ -566,6 +641,7 @@ Popup {
             }
             if (!subWidgetsScroll.value) subWidgetsScroll.value = [];
         } else {
+            index = column + (row * columns);
             blockStyleData = {};
             styleDataView.styleData = Qt.binding(() => blockStyleData);
             rowSpanMenuValue.value = 1;
@@ -592,7 +668,7 @@ Popup {
         if (newBlock) {
             controlGrid.updateImages(-1, -1, data);
         } else {
-            controlGrid.removeWidget((row * columns) + column, 0);
+            controlGrid.removeWidget(index, 0);
             controlGrid.updateImages(row, column, data);
         }
         if (controlGrid.addBlock(data)) {
@@ -616,13 +692,14 @@ Popup {
             return;
         settings.removeBlock(controlGrid.layoutName, row, column);
         controlGrid.updateImages();
-        controlGrid.removeWidget((row * controlGrid.columns) + column, 0);
+        controlGrid.removeWidget(index, 0);
         popup.close();
     }
 
     function buildMacros(): void {
+        const index = columnMenuValue.numberValue + (rowMenuValue.numberValue * columns);
         const mainMacros = {};
-        const sizePosData = { index: 0, subIndex: subWidgetsScroll.subIndex };
+        const sizePosData = { index: index, subIndex: subWidgetsScroll.subIndex };
         demoControlGrid.insertCoordsData(sizePosData);
         Utils.buildMacros(
             mainMacros,
@@ -636,7 +713,7 @@ Popup {
         );
         if (subWidgetsScroll.subIndex !== 0) {
             const parentMacros = {};
-            const parentSizePosData = { index: 0 };
+            const parentSizePosData = { index: index };
             demoControlGrid.insertCoordsData(parentSizePosData);
             Utils.buildMacros(
                 parentMacros,

@@ -422,6 +422,8 @@ ScrollView {
                         macros.style[styleSelector][child.propName.toLowerCase()] = child.numberValue;
                         changed = true;
                     }
+                } else if (child instanceof ImageMenuValue) {
+                    changed |= Utils.refreshImageValue(macros, child.value, styleSelector);
                 }
             }
             changed = changed || Utils.refreshStyleDataSingle(macros, styleData, styleSelector);

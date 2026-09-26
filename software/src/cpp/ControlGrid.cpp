@@ -149,11 +149,10 @@ void ControlGrid::testFill() const {
     lv_control_grid_test_fill(controlGrid);
     lv_unlock();
 }
-void ControlGrid::clear() {
+void ControlGrid::clear() const {
     CHECK_CONTROL_GRID()
     lv_lock();
     lv_control_grid_clear(controlGrid);
-    clearImages();
     lv_unlock();
 }
 void ControlGrid::move(const uint8_t fromIndex, const uint8_t toIndex) const {

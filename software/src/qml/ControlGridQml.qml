@@ -157,7 +157,7 @@ ControlGrid {
             if (Utils.refreshSubWidget(subMacros, subWidget)) {
                 if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
                 const subIndex = controlGrid.subWidget(subWidget.type, index, i+1, subWidget);
-                if (subIndex !== i+1) return false;
+                if (subIndex !== i+1) return;
                 changed = true;
             }
         }

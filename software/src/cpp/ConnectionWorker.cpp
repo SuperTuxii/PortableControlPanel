@@ -125,6 +125,7 @@ void ConnectionWorker::connectSerial() {
 
             serialConnected = true;
             clear();
+            clearImages();
             emit connectedChanged(true);
             break;
         }

@@ -5,6 +5,7 @@ import QtQuick.Controls
 RowLayout {
     id: layout
 
+    signal inputPressed(event: MouseEvent)
     property BigTextBox bigTextBox
     required property string attrKey
     property alias propName: textLabel.text
@@ -77,5 +78,7 @@ RowLayout {
                 popup.bigTextBox.closed.connect(removeBindings);
             }
         }
+
+        onPressed: (event) => layout.inputPressed(event)
     }
 }

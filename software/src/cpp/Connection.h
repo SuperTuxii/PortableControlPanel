@@ -147,6 +147,8 @@ public slots:
     static QSize imageSize(const QString &path);
     void cacheImage(const QString &urlString, const QString &replaceImagePath = QString());
     static void deleteCachedImage(const QString &path);
+
+    static QString loadSymbolConfig();
 signals:
     void connectedChanged();
     void connectionError(QString error);

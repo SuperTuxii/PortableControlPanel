@@ -96,6 +96,6 @@ Item {
     }
     FontLoader {
         id: materialFont
-        source: "qrc:///fonts/MaterialSymbolsRounded.ttf"
+        source: "qrc:///fonts/MaterialSymbols.ttf"
     }
 }

@@ -123,3 +123,15 @@ void Connection::deleteCachedImage(const QString& path) {
     QFile cachedFile(path);
     cachedFile.remove();
 }
+
+QString Connection::loadSymbolConfig() {
+    QFile file(":/fonts/MaterialSymbolsConfig.json");
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        qWarning() << "Failed to read symbol config";
+        return "{}";
+    }
+    QTextStream in(&file);
+    QString content = in.readAll();
+    file.close();
+    return content;
+}

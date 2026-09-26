@@ -47,8 +47,9 @@ file(GLOB toastify_resources
 qt_add_resources(ControlPanelSoftwareApp "fonts"
     PREFIX "/"
     FILES
-        "fonts/MaterialSymbolsRounded.ttf"
+        "fonts/MaterialSymbols.ttf"
         "fonts/Montserrat.ttf"
+        "fonts/MaterialSymbolsConfig.json"
 )
 qt_add_resources(ControlPanelSoftwareApp "toastify-icons"
     PREFIX "/"

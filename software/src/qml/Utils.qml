@@ -54,6 +54,20 @@ QtObject {
         }
         return values;
     }
+    function buildScreenMacros(macros, allStyleData, width: int, height: int, rows: int, columns: int, outerPad: int, rowPad: int, columnPad: int) {
+        macros.w = width;
+        macros.width = width;
+        macros.h = height;
+        macros.height = height;
+        macros.r = rows;
+        macros.rows = rows;
+        macros.c = columns;
+        macros.columns = columns;
+        macros.outerPad = outerPad;
+        macros.rowPad = rowPad;
+        macros.columnPad = columnPad;
+        buildStyleMacros(macros, allStyleData);
+    }
     function buildMacros(macros, allStyleData, width: int, height: int, row: int, column: int, rowSpan: int, columnSpan: int) {
         buildDimensionMacros(macros, width, height, row, column, rowSpan, columnSpan);
         buildStyleMacros(macros, allStyleData);
@@ -74,6 +88,7 @@ QtObject {
     }
     function buildSelectStyleMacros(selectStyleMacros, selectStyleData) {
         for (const styleData of selectStyleData) {
+            if (!styleData.value) continue;
             if (typeof styleData.value === "number")
                 selectStyleMacros[styleData.name.toLowerCase()] = styleData.value;
             else if (styleData.value.length && typeof styleData.value !== "string")

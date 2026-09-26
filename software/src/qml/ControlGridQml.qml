@@ -6,7 +6,7 @@ ControlGrid {
     id: controlGrid
     required property LvglDisplay displayPanel
     required property Settings settings
-    property string layoutName: "test"
+    property string layoutName: ""
     property var layoutData: settings.loadLayout(layoutName)
     property var dragTarget: {
         "baseX": 0, "baseY": 0, "x": 0, "y": 0,
@@ -19,13 +19,30 @@ ControlGrid {
         displayPanel.displaySizeRefreshed.connect(loadLayout);
         loadLayout();
         Connection.tryConnect();
+        layoutNameChanged.connect(loadLayout);
     }
-    onLayoutDataChanged: loadLayout
 
     function loadLayout(): void {
-        setLayout(rows, columns);
-        Connection.setLayout(rows, columns);
+        if (!settings.layoutExists(layoutName)) return;
+        layoutData = Qt.binding(() => settings.loadLayout(layoutName));
+        removeScreenStyles();
+        setLayout(layoutData.rows, layoutData.columns);
+        outerPad = layoutData.outerPad;
+        rowPad = layoutData.rowPad;
+        columnPad = layoutData.columnPad;
+        Connection.removeScreenStyles();
+        Connection.setLayout(layoutData.rows, layoutData.columns);
+        Connection.setOuterPad(layoutData.outerPad);
+        Connection.setRowPad(layoutData.rowPad);
+        Connection.setColumnPad(layoutData.columnPad);
+        updateScreenStyleMacros();
         updateImages();
+        if (layoutData.style) {
+            for (const styleSelector in layoutData.style) {
+                setScreenStyle(styleSelector, layoutData.style[styleSelector]);
+            }
+            Connection.setScreenStyle(layoutData.style);
+        }
         settings.loadBlocks(layoutName, addBlock);
     }
 
@@ -43,6 +60,15 @@ ControlGrid {
 
     function updateImages(row = -1, column = -1, data = undefined): void {
         let images = new Set();
+        if (layoutData.style) {
+            for (const styleSelector in layoutData.style) {
+                for (const styleElement of layoutData.style[styleSelector]) {
+                    if (styleElement.attrKey === Connection.BackgroundImageIndex
+                        && styleElement.value && styleElement.value.imageKey && styleElement.value.imageKey.length > 1)
+                        images.add(styleElement.value.imageKey);
+                }
+            }
+        }
         for (const block of layoutData.blocks) {
             if (row - block.row >= 0 && row - block.row < block.rowSpan
                 && column - block.column >= 0 && column - block.column < block.columnSpan)
@@ -85,6 +111,23 @@ ControlGrid {
         }
         loadImages(Array.from(images));
         Connection.loadImages(Array.from(images));
+    }
+    function updateScreenStyleMacros(): void {
+        if (!layoutData.style) return;
+        const macros = {};
+        Utils.buildScreenMacros(
+            macros,
+            layoutData.style,
+            displayPanel.displayWidth,
+            displayPanel.displayHeight,
+            rows,
+            columns,
+            outerPad,
+            rowPad,
+            columnPad
+        );
+        if (Utils.refreshStyleData(macros, layoutData.style))
+            settings.editLayout(layoutName, { style: layoutData.style });
     }
     function updateMacros(index: int, data, onMainChanged, onSubWidgetsChanged): void {
         let sizePosData = { index: index };

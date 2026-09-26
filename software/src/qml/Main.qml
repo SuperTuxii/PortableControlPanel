@@ -16,10 +16,14 @@ Window {
     Settings {
         id: settings
         property string defaultLayout: "{\"rows\": 3, \"columns\": 5, \"outerPad\": 5, \"rowPad\": 5, \"columnPad\": 5, \"blocks\": []}"
+        property alias currentLayout: controlGrid.layoutName
         property string layoutData: "{}"
         property string imageData: "{}"
         property alias backlightBrightness: brightnessSlider.value
 
+        function layoutExists(name: string): bool {
+            return name in JSON.parse(layoutData);
+        }
         function editLayout(name: string, data: variant): void {
             if ("blocks" in data)
                 return;
@@ -29,12 +33,23 @@ Window {
             Object.assign(configData[name], data);
             layoutData = JSON.stringify(configData);
         }
+        function renameLayout(fromName: string, toName: string): void {
+            let configData = JSON.parse(layoutData);
+            if (!(fromName in configData) || toName in configData) return;
+            configData[toName] = configData[fromName];
+            delete configData[fromName];
+            layoutData = JSON.stringify(configData);
+        }
         function removeLayout(name: string): void {
             let configData = JSON.parse(layoutData);
             if (name in configData) {
                 delete configData[name];
                 layoutData = JSON.stringify(configData);
             }
+        }
+        function loadLayouts(): variant {
+            const configData = JSON.parse(layoutData);
+            return Object.entries(configData).map(([layoutName, value]) => Object.assign(value, {layoutName}));
         }
         function saveBlock(layoutName: string, data: variant): void {
             let configData = JSON.parse(layoutData);
@@ -218,10 +233,81 @@ Window {
                     Layout.fillHeight: true
                     contentWidth: availableWidth
                     padding: Theme.sidebarRadius - Theme.sidebarButtonRadius
-                    ColumnLayout {
-                        id: sidebarLayout
+                    ListView {
+                        id: layoutsView
                         spacing: 10
-                        anchors.fill: parent
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+                        model: settings.loadLayouts()
+                        delegate: Item {
+                            required property int index
+                            required property var model
+                            height: ListView.view.width
+                            width: ListView.view.width
+                            Button {
+                                anchors.fill: parent
+                                text: model.display ? model.display : model.layoutName
+                                contentItem: Text {
+                                    text: parent.text
+                                    font: parent.font
+                                    opacity: parent.enabled ? 1.0 : 0.3
+                                    color: parent.down ? Theme.buttonWhiteActive : Theme.buttonWhite
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                background: Rectangle {
+                                    color: Qt.darker(Theme.mainBackground, parent.down || parent.isSelected() ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                    radius: Theme.sidebarButtonRadius
+                                    border.color: Qt.darker(Theme.border, parent.down || parent.isSelected() ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                    border.width: Theme.sidebarButtonBorderWidth
+                                }
+                                onClicked: {
+                                    if (isSelected())
+                                        controlGrid.layoutName = "";
+                                    else
+                                        controlGrid.layoutName = model.layoutName
+                                }
+                                Component.onCompleted: {
+                                    if (model.displayType === "Symbol") {
+                                        font.family = Theme.iconFontName;
+                                        font.weight = Theme.iconFontWeight;
+                                        font.pixelSize = Theme.sidebarIconSize;
+                                    }
+                                }
+
+                                function isSelected(): bool {
+                                    return controlGrid.layoutName === model.layoutName;
+                                }
+                            }
+                            TapHandler {
+                                acceptedButtons: Qt.RightButton
+                                onTapped: {
+                                    layoutContextMenu.layoutName = model.layoutName;
+                                    layoutContextMenu.popup();
+                                }
+                            }
+                        }
+                    }
+                    Menu {
+                        id: layoutContextMenu
+                        property string layoutName
+
+                        title: "LayoutMenu"
+                        MenuItem {
+                            text: "Edit"
+                            onTriggered: {
+                                layoutMenu.layoutName = layoutContextMenu.layoutName;
+                                layoutMenu.open();
+                            }
+                        }
+                        MenuItem {
+                            text: "Remove"
+                            onTriggered: {
+                                if (controlGrid.layoutName === layoutContextMenu.layoutName)
+                                    controlGrid.layoutName = "";
+                                settings.removeLayout(layoutContextMenu.layoutName)
+                            }
+                        }
                     }
                 }
                 Rectangle {
@@ -254,6 +340,10 @@ Window {
                         radius: Theme.sidebarButtonRadius
                         border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
                         border.width: Theme.sidebarButtonBorderWidth
+                    }
+                    onClicked: {
+                        layoutMenu.layoutName = "";
+                        layoutMenu.open();
                     }
                 }
                 Button {
@@ -296,6 +386,7 @@ Window {
                 anchors.centerIn: parent
                 width: displayPanel.displayWidth + (2 * Theme.displayBorderRadius)
                 height: displayPanel.displayHeight + (2 * Theme.displayBorderRadius)
+                visible: settings.layoutExists(controlGrid.layoutName)
                 scale: displayScale
                 radius: Theme.displayBorderRadius
                 border.width: Theme.displayBorderRadius
@@ -322,6 +413,15 @@ Window {
             }
         }
     }
+    LayoutMenu {
+        id: layoutMenu
+        settings: settings
+        controlGrid: controlGrid
+        bigTextBox: bigTextBox
+        colorPicker: colorPicker
+        imagesMenu: imagesMenu
+        symbolListMenu: symbolListMenu
+    }
     ControlGridBlockMenu {
         id: controlGridBlockMenu
         settings: settings
@@ -340,6 +440,9 @@ Window {
     }
     BigTextBox {
         id: bigTextBox
+    }
+    SymbolListMenu {
+        id: symbolListMenu
     }
     Toastify {
         id: toastManager
@@ -381,7 +484,12 @@ Window {
             Connection.setBacklightBrightness(brightnessSlider.value);
             Connection.removeScreenStyles();
             Connection.setLayout(controlGrid.rows, controlGrid.columns);
+            Connection.setOuterPad(controlGrid.outerPad);
+            Connection.setRowPad(controlGrid.rowPad);
+            Connection.setColumnPad(controlGrid.columnPad);
             controlGrid.updateImages();
+            if (controlGrid.layoutData.style)
+                Connection.setScreenStyle(controlGrid.layoutData.style)
             settings.loadBlocks(controlGrid.layoutName, block => {
                 let index = (block.row * controlGrid.columns) + block.column;
                 let index2 = index + (block.columnSpan-1) + ((block.rowSpan-1) * controlGrid.columns);

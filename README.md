@@ -14,3 +14,7 @@ I made this since my light switch is quite far from my bed and it's always annoy
 ![View of the stand without the usb port in CAD from the back](/CAD/images/Stand-back-no-usb-view.png)
 ![View of the stand in CAD from the front](/CAD/images/Stand-front-view.png)
 ![View of the separated stand in CAD](/CAD/images/Stand-separated-view.png)
+
+# TODOs
+
+- Switch Protocol to [Flatbuffers](https://flatbuffers.dev/)

@@ -10,7 +10,7 @@ set(LVGL_DIR "${CMAKE_SOURCE_DIR}/lvgl_sim_qt/lvgl")
 find_package(Qt6 REQUIRED COMPONENTS Core Quick Widgets SerialPort)
 
 add_subdirectory(lvgl_sim)
-add_subdirectory(${CMAKE_SOURCE_DIR}/../firmware/main lv_control_grid_lib)
+add_subdirectory(${CMAKE_SOURCE_DIR}/../protocol protocol)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -82,7 +82,7 @@ set_target_properties(ControlPanelSoftwareApp PROPERTIES
 )
 
 target_link_libraries(ControlPanelSoftwareApp
-    PRIVATE Qt6::Core Qt6::Quick Qt6::Widgets Qt6::SerialPort lvgl_simplugin lv_control_grid_lib
+    PRIVATE Qt6::Core Qt6::Quick Qt6::Widgets Qt6::SerialPort lvgl_simplugin protocol_lib
 )
 
 include(GNUInstallDirs)

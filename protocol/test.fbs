@@ -1,0 +1,18 @@
+namespace PortableControlPanel;
+
+union Data {
+    GetPanelInfo,
+    PanelInfo
+}
+
+table Command {
+    data : Data;
+}
+
+table GetPanelInfo {}
+table PanelInfo {
+    width : uint16;
+    height : uint16;
+}
+
+root_type Command;

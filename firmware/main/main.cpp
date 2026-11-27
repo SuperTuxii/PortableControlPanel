@@ -1,9 +1,3 @@
-/*
- * SPDX-FileCopyrightText: 2010-2022 Espressif Systems (Shanghai) CO LTD
- *
- * SPDX-License-Identifier: CC0-1.0
- */
-
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -22,12 +16,11 @@
 
 #define ALIGN_UP(num, align)    (((num) + ((align) - 1)) & ~((align) - 1))
 #define ALIGN_DOWN(num, align)  ((num) & ~((align) - 1))
-
-static char *LVGL_TAG = "lvgl";
+#define LVGL_TAG                "lvgl"
 
 static esp_err_t lvgl_init() {
     ESP_LOGI(LVGL_TAG, "Initialize LVGL port");
-    const lvgl_port_cfg_t lvgl_cfg = {
+    constexpr lvgl_port_cfg_t lvgl_cfg = {
         .task_priority = LVGL_TASK_PRIORITY,
         .task_stack = LVGL_TASK_STACK_SIZE,
         .task_affinity = -1,
@@ -46,12 +39,12 @@ static esp_err_t lvgl_init() {
         .hres = LCD_H_RES,
         .vres = LCD_V_RES,
         .monochrome = false,
-        .color_format = LV_COLOR_FORMAT_RGB565,
         .rotation = {
             .swap_xy = false,
             .mirror_x = false,
             .mirror_y = false,
         },
+        .color_format = LV_COLOR_FORMAT_RGB565,
         .flags = {
             .buff_dma = true,
             .buff_spiram = true,
@@ -59,7 +52,7 @@ static esp_err_t lvgl_init() {
             .swap_bytes = false,
         }
     };
-    const lvgl_port_display_dsi_cfg_t display_dsi_cfg = {
+    constexpr lvgl_port_display_dsi_cfg_t display_dsi_cfg = {
         //.flags.avoid_tearing = true   doesn't work for some reason. Me not know
     };
     lv_disp_t *display = lvgl_port_add_disp_dsi(&display_cfg, &display_dsi_cfg);
@@ -88,11 +81,11 @@ static void tinyusb_cdc_rx_callback(const int itf, cdcacm_event_t *event) {
 }
 
 static esp_err_t tinyusb_init() {
-    const tinyusb_config_t tusb_cfg = TINYUSB_DEFAULT_CONFIG();
+    constexpr tinyusb_config_t tusb_cfg = TINYUSB_DEFAULT_CONFIG();
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
 
-    const tinyusb_config_cdcacm_t acm_cfg = {
+    constexpr tinyusb_config_cdcacm_t acm_cfg = {
         .cdc_port = TINYUSB_PROTOCOL_PORT,
         .callback_rx = &tinyusb_cdc_rx_callback,
         .callback_rx_wanted_char = nullptr,
@@ -104,7 +97,7 @@ static esp_err_t tinyusb_init() {
     return ESP_OK;
 }
 
-void app_main() {
+extern "C" void app_main() {
     // Initialize display and LVGL
     ESP_ERROR_CHECK(display_brightness_init());
     ESP_ERROR_CHECK(display_backlight_on());

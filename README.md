@@ -3,6 +3,11 @@ A control panel with a touchscreen, speaker and more that magnetically connects 
 
 I made this since my light switch is quite far from my bed and it's always annoying when I'm in bed and have to turn off the lights. So I will probably put this in my bed for that purpose, but making it wireless still leaves me with the possibility to use it in even more ways in the future.
 
+# TODOs
+
+- [ ] Switch Protocol to [Flatbuffers](https://flatbuffers.dev/)
+- [ ] Switch Firmware to C++
+
 # Images
 ## Panel
 ![View of the panel in CAD from the front](/CAD/images/Panel-view.png)
@@ -14,7 +19,3 @@ I made this since my light switch is quite far from my bed and it's always annoy
 ![View of the stand without the usb port in CAD from the back](/CAD/images/Stand-back-no-usb-view.png)
 ![View of the stand in CAD from the front](/CAD/images/Stand-front-view.png)
 ![View of the separated stand in CAD](/CAD/images/Stand-separated-view.png)
-
-# TODOs
-
-- Switch Protocol to [Flatbuffers](https://flatbuffers.dev/)

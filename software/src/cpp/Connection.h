@@ -56,12 +56,14 @@ public:
     PROTOCOL_STYLE_STATES_ENUM
     PROTOCOL_STYLE_PARTS_ENUM
     PROTOCOL_COLOR_FORMATS_ENUM
+    PROTOCOL_ACTION_EVENT_TYPE
     Q_ENUM(Commands)
     Q_ENUM(Actions)
     Q_ENUM(StyleKeys)
     Q_ENUM(StyleStates)
     Q_ENUM(StyleParts)
     Q_ENUM(ColorFormats)
+    Q_ENUM(EventTypes)
     Q_INVOKABLE static QString styleStateString(const int value) {
         QString key = QMetaEnum::fromType<StyleStates>().valueToKey(value);
         return key.isNull() ? key : key.slice(5);
@@ -95,6 +97,9 @@ public:
         return static_cast<QImage::Format>(QMetaEnum::fromType<QImage::Format>().keyToValue(
             ("Format_" + colorFormatString(value)).toStdString().c_str())
         );
+    }
+    Q_INVOKABLE static QString actionEventTypeString(const int value) {
+        return QMetaEnum::fromType<EventTypes>().valueToKey(value);
     }
 private:
     void handleConnectionChanged(bool isConnected);
@@ -143,6 +148,7 @@ public slots:
     }
     WORKER_METHOD_3ARG_INVOKER(removeStyle, uint8_t, index, uint8_t, subIndex, uint32_t, styleSelector)
     WORKER_METHOD_2ARG_INVOKER(removeStyles, uint8_t, index, uint8_t, subIndex)
+    WORKER_METHOD_1ARG_INVOKER(addEventActions, uint8_t, index)
 
     static QSize imageSize(const QString &path);
     void cacheImage(const QString &urlString, const QString &replaceImagePath = QString());

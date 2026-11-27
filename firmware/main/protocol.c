@@ -19,7 +19,7 @@ static uint8_t tuCmd;
 static uint8_t tuOperands[] = {0, 0};
 static uint8_t tuDataLength = 0;
 static uint8_t tuData[256];
-static uint8_t writeBuffer[260];
+static uint8_t writeData[256];
 
 void tinyusbReadReady() {
     size_t rx_size = 0;
@@ -164,16 +164,13 @@ void handleCommand(const uint8_t cmd, const uint8_t operand1, const uint8_t oper
     if ((cmd >> 6) == 0) { // No operands or data
         switch (cmd) {
         case PrintProtocolInfoCMD:
-            writeBuffer[0] = ProtocolInfoACT;
             const lv_obj_t *screen = lv_screen_active();
-            const int textLength = sprintf((char *) writeBuffer + 2, "ControlPanelFirmware v%s %ldx%ld", PROTOCOL_VERSION, lv_obj_get_width(screen), lv_obj_get_height(screen));
+            const int textLength = sprintf((char *) writeData, "ControlPanelFirmware v%s %ldx%ld", PROTOCOL_VERSION, lv_obj_get_width(screen), lv_obj_get_height(screen));
             if (textLength < 0 || textLength > UINT8_MAX) {
                 ESP_LOGE(COMMS_TAG, "Protocol Information Text has an invalid size: %d", textLength);
                 return;
             }
-            writeBuffer[1] = textLength;
-            tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, textLength + 2);
-            tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+            sendAction(ProtocolInfoACT, 0, 0, writeData, textLength);
             break;
         case RestartCMD:
             fflush(stdout);
@@ -203,11 +200,8 @@ void handleCommand(const uint8_t cmd, const uint8_t operand1, const uint8_t oper
             break;
         default: goto undefinedCommandError;
         }
-        writeBuffer[0] = CmdConfirmationACT;
-        writeBuffer[1] = 0;
-        writeBuffer[2] = cmd;
-        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, 3);
-        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+        writeData[0] = cmd;
+        sendAction(CmdConfirmationACT, 0, 0, writeData, 0);
     } else if ((cmd >> 6) == 1) { // Only operands
         switch (cmd) {
         case SetBacklightBrightnessCMD:
@@ -249,15 +243,18 @@ void handleCommand(const uint8_t cmd, const uint8_t operand1, const uint8_t oper
                 lvgl_port_unlock();
             }
             break;
+        case AddEventActionCMD:
+            if (lvgl_port_lock(0)) {
+                lv_control_grid_add_event_action(cg_act, operand1, operand2);
+                lvgl_port_unlock();
+            }
+            break;
         default: goto undefinedCommandError;
         }
-        writeBuffer[0] = CmdConfirmationACT;
-        writeBuffer[1] = 2;
-        writeBuffer[2] = cmd;
-        writeBuffer[3] = operand1;
-        writeBuffer[4] = operand2;
-        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, 5);
-        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+        writeData[0] = cmd;
+        writeData[1] = operand1;
+        writeData[2] = operand2;
+        sendAction(CmdConfirmationACT, 0, 0, writeData, 2);
     } else if ((cmd >> 6) == 2) { // Only data
         switch (cmd) {
         case SetOuterPadCMD:
@@ -292,13 +289,10 @@ void handleCommand(const uint8_t cmd, const uint8_t operand1, const uint8_t oper
             break;
         default: goto undefinedCommandError;
         }
-        writeBuffer[0] = CmdConfirmationACT;
-        writeBuffer[1] = dataLength > 15 ? 17 : dataLength;
-        writeBuffer[2] = cmd;
-        writeBuffer[3] = dataLength;
-        memcpy(writeBuffer + 4, data, dataLength > 15 ? 16 : dataLength+1);
-        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, writeBuffer[1] + 3);
-        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+        writeData[0] = cmd;
+        writeData[1] = dataLength;
+        memcpy(writeData + 2, data, dataLength > 15 ? 16 : dataLength+1);
+        sendAction(CmdConfirmationACT, 0, 0, writeData, dataLength > 15 ? 17 : dataLength+2);
     } else { // Operands and data
         switch (cmd) {
         case SetStyleDataCMD:
@@ -360,17 +354,38 @@ void handleCommand(const uint8_t cmd, const uint8_t operand1, const uint8_t oper
             break;
         default: goto undefinedCommandError;
         }
-        writeBuffer[0] = CmdConfirmationACT;
-        writeBuffer[1] = dataLength > 15 ? 17 : dataLength;
-        writeBuffer[2] = cmd;
-        writeBuffer[3] = operand1;
-        writeBuffer[4] = operand2;
-        writeBuffer[5] = dataLength;
-        memcpy(writeBuffer + 6, data, dataLength > 15 ? 16 : dataLength+1);
-        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, writeBuffer, writeBuffer[1] + 3);
-        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+        writeData[0] = cmd;
+        writeData[1] = operand1;
+        writeData[2] = operand2;
+        writeData[3] = dataLength;
+        memcpy(writeData + 4, data, dataLength > 13 ? 14 : dataLength+1);
+        sendAction(CmdConfirmationACT, 0, 0, writeData, dataLength > 13 ? 17 : dataLength+4);
     }
     return;
 undefinedCommandError:
     ESP_LOGE(COMMS_TAG, "Undefined Command: %02X", cmd);
+}
+
+void sendAction(const uint8_t act, const uint8_t operand1, const uint8_t operand2, const uint8_t* data, const uint8_t dataLength) {
+    if ((act >> 6) == 0) { // No operands or data
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &act, 1);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+    } else if ((act >> 6) == 1) { // Only operands
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &act, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &operand1, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &operand2, 1);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+    } else if ((act >> 6) == 2) { // Only data
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &act, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &dataLength, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, data, dataLength+1);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+    } else { // Operands and data
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &act, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &operand1, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &operand2, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, &dataLength, 1);
+        tinyusb_cdcacm_write_queue(TINYUSB_PROTOCOL_PORT, data, dataLength+1);
+        tinyusb_cdcacm_write_flush(TINYUSB_PROTOCOL_PORT, 0);
+    }
 }

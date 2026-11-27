@@ -53,7 +53,7 @@ bool ConnectionWorker::isConnected() const {
 
 bool ConnectionWorker::checkConfirmation() {
     constexpr int timeout = 500;
-    int8_t action = 0;
+    uint8_t action = 0;
     uint8_t dataLength = 0;
     QByteArray data;
     if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(timeout)) goto confirmationFailure;
@@ -63,7 +63,10 @@ bool ConnectionWorker::checkConfirmation() {
     while (serialPort.bytesAvailable() <= dataLength) if (!serialPort.waitForReadyRead(timeout)) break;
     if (serialPort.bytesAvailable() <= dataLength) goto confirmationFailure;
     data = serialPort.read(dataLength+1);
-    if (data == QByteArray::fromRawData(reinterpret_cast<const char*>(writeBuffer), dataLength+1)) return true;
+    if (data == QByteArray::fromRawData(reinterpret_cast<const char*>(writeBuffer), dataLength+1)) {
+        if (serialPort.bytesAvailable()) serialReadReady();
+        return true;
+    }
 confirmationFailure:
     const QByteArray sentData = QByteArray::fromRawData(reinterpret_cast<const char*>(writeBuffer), dataLength+1);
     qCritical() << "Confirmation for Command failed:" << sentData.toHex(' ') << "!=" << data.toHex(' ');
@@ -99,9 +102,9 @@ void ConnectionWorker::connectSerial() {
             uint8_t textLength = 0;
             if (serialPort.bytesAvailable() < 1 && !serialPort.waitForReadyRead(100)) goto initializeProtocolFailure;
             serialPort.read(reinterpret_cast<char*>(&textLength), 1);
-            while (serialPort.bytesAvailable() < textLength) if (!serialPort.waitForReadyRead(100)) break;
-            if (serialPort.bytesAvailable() < textLength) goto initializeProtocolFailure;
-            QString text(serialPort.read(textLength));
+            while (serialPort.bytesAvailable() <= textLength) if (!serialPort.waitForReadyRead(100)) break;
+            if (serialPort.bytesAvailable() <= textLength) goto initializeProtocolFailure;
+            QString text(serialPort.read(textLength+1));
             QStringList data = text.replace(QRegularExpression(R"(^\w* v([^ ]*) (\d*)x(\d*))"), R"(\1 \2 \3)").split(" ");
             if (data[0] != PROTOCOL_VERSION) {
                 QString message = QString("Serial Protocol Version not matching: ") + PROTOCOL_VERSION + "/" + data[0];
@@ -707,10 +710,84 @@ void ConnectionWorker::removeStyles(const uint8_t index, const uint8_t subIndex)
     checkConfirmation();
 }
 
+void ConnectionWorker::addEventActions(const uint8_t index) {
+    CHECK_CONNECTION();
+    writeBuffer[0] = Connection::AddEventActionCMD;
+    writeBuffer[1] = index;
+    writeBuffer[2] = Connection::AllEvents;
+    WRITE_SERIAL(3);
+    checkConfirmation();
+}
+
 void ConnectionWorker::serialReadReady() {
     if (!serialConnected) return;
-    // while (serialPort.canReadLine())
-    //     qInfo() << "Read:" << QString(serialPort.readLine());
+    qint64 availableBytes = serialPort.bytesAvailable();
+    while (availableBytes) {
+        const uint8_t action = serialPort.peek(1).front();
+        if (action == Connection::ProtocolInfoACT || action == Connection::CmdConfirmationACT) return;
+        QByteArray readData = serialPort.peek(4);
+        if ((action >> 6) == 0) { // No operands or data
+            serialPort.skip(1);
+        } else if ((action >> 6) == 1) { // Only operands
+            if (readData.length() < 3) return;
+            const uint8_t operand1 = readData.at(1);
+            const uint8_t operand2 = readData.at(2);
+            serialPort.skip(3);
+            // TODO: Implement
+            switch (action) {
+            case Connection::PressedEventACT:
+                qInfo() << "Pressed Cell" << operand1;
+                break;
+            case Connection::PressLostEventACT:
+                qInfo() << "Press Lost Cell" << operand1;
+                break;
+            case Connection::ShortClickedEventACT:
+                qInfo() << "Short Clicked Cell" << operand1;
+                break;
+            case Connection::SingleClickedEventACT:
+                qInfo() << "Single Clicked Cell" << operand1;
+                break;
+            case Connection::DoubleClickedEventACT:
+                qInfo() << "Double Clicked Cell" << operand1;
+                break;
+            case Connection::TripleClickedEventACT:
+                qInfo() << "Triple Clicked Cell" << operand1;
+                break;
+            case Connection::LongPressedEventACT:
+                qInfo() << "Long Pressed Cell" << operand1;
+                break;
+            case Connection::LongPressedRepeatEventACT:
+                qInfo() << "Long Pressed Repeat Cell" << operand1;
+                break;
+            case Connection::ClickedEventACT:
+                qInfo() << "Clicked Cell" << operand1;
+                break;
+            case Connection::ReleasedEventACT:
+                qInfo() << "Released Cell" << operand1;
+                break;
+            case Connection::GestureEventACT:
+                qInfo() << "Gesture" << operand2 << "Cell" << operand1;
+                break;
+            default:
+                qWarning() << "Unknown action" << QString::number(action, 16) << " received";
+            }
+        } else if ((action >> 6) == 2) { // Only data
+            if (readData.length() < 2) return;
+            const uint8_t dataLength = readData.at(1);
+            if (availableBytes < dataLength+3) return;
+            serialPort.skip(2);
+            QByteArray data = serialPort.read(dataLength+1);
+        } else { // Operands and data
+            if (readData.length() < 4) return;
+            const uint8_t operand1 = readData.at(1);
+            const uint8_t operand2 = readData.at(2);
+            const uint8_t dataLength = readData.at(3);
+            if (availableBytes < dataLength+5) return;
+            serialPort.skip(4);
+            QByteArray data = serialPort.read(dataLength+1);
+        }
+        availableBytes = serialPort.bytesAvailable();
+    }
 }
 
 void ConnectionWorker::serialErrorOccurred(const QSerialPort::SerialPortError error) {

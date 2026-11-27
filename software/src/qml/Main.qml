@@ -429,6 +429,10 @@ Window {
         bigTextBox: bigTextBox
         colorPicker: colorPicker
         imagesMenu: imagesMenu
+        actionsEditor: actionsEditor
+    }
+    ActionsEditor {
+        id: actionsEditor
     }
     ImagesMenu {
         id: imagesMenu
@@ -499,6 +503,7 @@ Window {
                     if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
                     Connection.subWidget(subWidget.type, index, i+1, true, subWidget);
                 }
+                Connection.addEventActions(index);
             });
         } else {
             Connection.clearImages();

@@ -11,6 +11,20 @@
 
 static uint8_t styleData[5];
 
+extern "C" void sendAction(const uint8_t act, const uint8_t operand1, const uint8_t operand2, const uint8_t* data, const uint8_t dataLength) {
+    if ((act >> 6) == 0) { // No operands or data
+        qInfo() << "Internal Action:" << QString::number(act, 16);
+    } else if ((act >> 6) == 1) { // Only operands
+        qInfo() << "Internal Action:" << QString::number(act, 16) << QString::number(operand1, 16)
+                << QString::number(operand2, 16);
+    } else if ((act >> 6) == 2) { // Only data
+        qInfo() << "Internal Action:" << QString::number(act, 16) << "with" << dataLength << "bytes of data";
+    } else { // Operands and data
+        qInfo() << "Internal Action:" << QString::number(act, 16) << QString::number(operand1, 16)
+                << QString::number(operand2, 16) << "with" << dataLength << "bytes of data";
+    }
+}
+
 void ControlGrid::reinitControlGrid() {
     lv_lock();
     controlGrid = lv_control_grid_create(lvglRenderer->getScreen());

@@ -1,4 +1,5 @@
 #include "lvgl.h"
+#include "protocol.h"
 #include "src/core/lv_obj_private.h"
 #ifdef ESP_PLATFORM
 #include "esp_log.h"
@@ -50,6 +51,22 @@ static void freeControlGridOnDelete(lv_event_t *event) {
     free(control_grid->rowDsc);
     free(control_grid->columnDsc);
     free(control_grid);
+}
+
+static void cellEventActionCB(lv_event_t *event) {
+    const lv_event_code_t eventCode = lv_event_get_code(event);
+    const lv_control_grid_t *controlGrid = lv_event_get_user_data(event);
+    const lv_obj_t *target = lv_event_get_current_target_obj(event);
+    const int32_t row = lv_obj_get_style_grid_cell_row_pos(target, LV_PART_MAIN);
+    const int32_t column = lv_obj_get_style_grid_cell_column_pos(target, LV_PART_MAIN);
+    const uint8_t index = (row * controlGrid->columnCount) + column;
+    if (eventCode == LV_EVENT_PRESSED) {
+        sendAction(PressedEventACT, index, 0, nullptr, 0);
+    } else if (eventCode >= LV_EVENT_PRESS_LOST && eventCode <= LV_EVENT_RELEASED) {
+        sendAction(PressLostEventACT + (eventCode - LV_EVENT_PRESS_LOST), index, 0, nullptr, 0);
+    } else if (eventCode == LV_EVENT_GESTURE) {
+        sendAction(GestureEventACT, index, lv_indev_get_gesture_dir(lv_indev_active()), nullptr, 0);
+    }
 }
 
 static void set_grid_size(const lv_control_grid_t *cg) {
@@ -368,4 +385,18 @@ void lv_control_grid_remove_styles(const lv_control_grid_t *cg, const uint8_t in
         if (object == nullptr) return;
     }
     removeStyles(object);
+}
+
+void lv_control_grid_add_event_action(const lv_control_grid_t *cg, const uint8_t index, const uint8_t eventType) {
+    lv_obj_t *object = findCellChildByIndex(cg, index);
+    if (object == nullptr) return;
+    if (eventType <= PressedEvent) {
+        lv_obj_add_event_cb(object, cellEventActionCB, eventType, (void*) cg);
+        lv_obj_remove_flag(object, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    } else if (eventType <= ReleasedEvent) {
+        lv_obj_add_event_cb(object, cellEventActionCB, eventType+1, (void*) cg);
+    } else if (eventType == GestureEvent) {
+        lv_obj_add_event_cb(object, cellEventActionCB, LV_EVENT_GESTURE, (void*) cg);
+        lv_obj_remove_flag(object, LV_OBJ_FLAG_GESTURE_BUBBLE);
+    }
 }

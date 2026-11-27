@@ -75,6 +75,7 @@ uint8_t lv_control_grid_image(const lv_control_grid_t *cg, uint8_t index, uint8_
 uint8_t *lv_control_grid_set_style(const lv_control_grid_t *cg, uint8_t index, uint8_t subIndex, lv_style_t **style, lv_style_selector_t *styleSelector, uint8_t *data, uint8_t *end);
 void lv_control_grid_remove_style(const lv_control_grid_t *cg, uint8_t index, uint8_t subIndex, lv_style_selector_t styleSelector);
 void lv_control_grid_remove_styles(const lv_control_grid_t *cg, uint8_t index, uint8_t subIndex);
+void lv_control_grid_add_event_action(const lv_control_grid_t *cg, uint8_t index, uint8_t eventType);
 
 #ifdef __cplusplus
 } /*extern "C"*/

@@ -23,15 +23,16 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 
 ### Only Operands Commands (0x40 - 0x7F)
 
-| Command | 1. Operand                    | 2. Operand                         | Meaning                                                                     |
-| ------- | ----------------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
-| 0x40    | Brightness (0-1023) High Byte | Brightness (0-1023) Low Byte       | Set the Brightness of the Backlight                                         |
-| 0x41    | Cell Count<br>(1-256 Cells)   | Column Count<br>(1-256 Columns)    | Set the Layout of the Control Grid                                          |
-| 0x42    | Cell Index (from)             | Cell Index (to)                    | Move Widget from the given Index to the given Index                         |
-| 0x43    | Cell Index 1                  | Cell Index 2                       | Change the Widget at Cell Index 1 to span from Cell Index 1 to Cell Index 2 |
-| 0x44    | Cell Index                    | Sub Child Index (0 is main widget) | Remove the widget at the given Cell Index and Sub Child Index               |
-| 0x45    | Image Index                   | -                                  | Remove the image with the given index                                       |
-| 0x46    | Cell Index                    | Sub Child Index (0 is main widget) | Reset all Styles for the widget at the given Cell Index and Sub Child Index |
+| Command | 1. Operand                    | 2. Operand                         | Meaning                                                                        |
+| ------- | ----------------------------- | ---------------------------------- | ------------------------------------------------------------------------------ |
+| 0x40    | Brightness (0-1023) High Byte | Brightness (0-1023) Low Byte       | Set the Brightness of the Backlight                                            |
+| 0x41    | Cell Count<br>(1-256 Cells)   | Column Count<br>(1-256 Columns)    | Set the Layout of the Control Grid                                             |
+| 0x42    | Cell Index (from)             | Cell Index (to)                    | Move Widget from the given Index to the given Index                            |
+| 0x43    | Cell Index 1                  | Cell Index 2                       | Change the Widget at Cell Index 1 to span from Cell Index 1 to Cell Index 2    |
+| 0x44    | Cell Index                    | Sub Child Index (0 is main widget) | Remove the widget at the given Cell Index and Sub Child Index                  |
+| 0x45    | Image Index                   | -                                  | Remove the image with the given index                                          |
+| 0x46    | Cell Index                    | Sub Child Index (0 is main widget) | Reset all Styles for the widget at the given Cell Index and Sub Child Index    |
+| 0x47    | Cell Index                    | Event Type                         | Add action callback with the given event type to the cell with the given index |
 
 ### Only Data Commands (0x80 - 0xBF)
 
@@ -60,6 +61,20 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 
 ### Only Operands Actions (0x40 - 0x7F)
 
+| Command | 1. Operand | 2. Operand        | Meaning                                                                                                             |
+| ------- | ---------- | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 0x40    | Cell Index | -                 | Widget has been pressed (`LV_EVENT_PRESSED`)                                                                        |
+| 0x41    | Cell Index | -                 | Widget is still being pressed, but slid cursor/finger off Widget (`LV_EVENT_PRESS_LOST`)                            |
+| 0x42    | Cell Index | -                 | Widget was pressed for a short period of time, then released. Not if scrolled (`LV_EVENT_SHORT_CLICKED`)            |
+| 0x43    | Cell Index | -                 | First short click within a small distance and short time (`LV_EVENT_SINGLE_CLICKED`)                                |
+| 0x44    | Cell Index | -                 | Second short click within small distance and short time (`LV_EVENT_DOUBLE_CLICKED`)                                 |
+| 0x45    | Cell Index | -                 | Third short click within small distance and short time (`LV_EVENT_TRIPLE_CLICKED`)                                  |
+| 0x46    | Cell Index | -                 | Object has been pressed for at least `long_press_time`. Not if scrolled (`LV_EVENT_LONG_PRESSED`)                   |
+| 0x47    | Cell Index | -                 | Sent after `long_press_time` in every `long_press_repeat_time` ms. Not if scrolled (`LV_EVENT_LONG_PRESSED_REPEAT`) |
+| 0x48    | Cell Index | -                 | Sent on release if not scrolled (regardless to long press) (`LV_EVENT_CLICKED`)                                     |
+| 0x49    | Cell Index | -                 | Sent in every cases when Widget has been released (`LV_EVENT_RELEASED`)                                             |
+| 0x4A    | Cell Index | Gesture Direction | A gesture is detected (`LV_EVENT_GESTURE`)                                                                          |
+
 ### Only Data Actions (0x80 - 0xBF)
 
 | Command | Data            | Meaning                                                                                                                           |
@@ -69,7 +84,24 @@ This means there are 64 possible commands for each of the 4 possible types (no o
 
 ### Operands and Data Actions (0xC0 - 0xFF)
 
-## Data
+## Types
+### Event Type
+
+| Event Type                     | Number Value | Meaning                                                                            |
+| ------------------------------ | ------------ | ---------------------------------------------------------------------------------- |
+| `LV_EVENT_ALL`                 | 0            | All events                                                                         |
+| `LV_EVENT_PRESSED`             | 1            | Widget has been pressed                                                            |
+| `LV_EVENT_PRESS_LOST`          | 2            | Widget is still being pressed, but slid cursor/finger off Widget                   |
+| `LV_EVENT_SHORT_CLICKED`       | 3            | Widget was pressed for a short period of time, then released. Not if scrolled      |
+| `LV_EVENT_SINGLE_CLICKED`      | 4            | First short click within a small distance and short time                           |
+| `LV_EVENT_DOUBLE_CLICKED`      | 5            | Second short click within small distance and short time                            |
+| `LV_EVENT_TRIPLE_CLICKED`      | 6            | Third short click within small distance and short time                             |
+| `LV_EVENT_LONG_PRESSED`        | 7            | Object has been pressed for at least `long_press_time`. Not if scrolled            |
+| `LV_EVENT_LONG_PRESSED_REPEAT` | 8            | Sent after `long_press_time` in every `long_press_repeat_time` ms. Not if scrolled |
+| `LV_EVENT_CLICKED`             | 9            | Sent on release if not scrolled (regardless to long press)                         |
+| `LV_EVENT_RELEASED`            | 10           | Sent in every cases when Widget has been released                                  |
+| `LV_EVENT_GESTURE`             | 11           | A gesture is detected                                                              |
+
 ### Style data
 #### Structure
 

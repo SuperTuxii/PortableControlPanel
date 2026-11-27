@@ -14,6 +14,7 @@ Popup {
     required property BigTextBox bigTextBox
     required property ColorPicker colorPicker
     required property ImagesMenu imagesMenu
+    required property ActionsEditor actionsEditor
     property bool newBlock
     property int row
     property int column
@@ -92,275 +93,415 @@ Popup {
         }
 
         ColumnLayout {
-            id: rightLayout
-            Layout.alignment: Qt.AlignTop
             Layout.fillWidth: true
             Layout.fillHeight: true
-
-            Label {
-                text: "Configuration:"
-                font.pointSize: 15
-                font.underline: true
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
-                Layout.fillWidth: true
-                Layout.bottomMargin: 10
-            }
-            // Main Widget Configuration
-            OptionMenuValue {
-                id: typeMenuValue
-                attrKey: "type"
-                propName: "Type"
-                options: popup.blockTypes
-                visible: subWidgetsScroll.subIndex === 0
-                Layout.minimumHeight: 30
-                Layout.maximumHeight: 30
-            }
-            IntMenuValue {
-                id: columnMenuValue
-                attrKey: "column"
-                propName: "Column"
-                min: 0
-                max: popup.columns - 1
-                visible: subWidgetsScroll.subIndex === 0
-                Layout.minimumHeight: 30
-                Layout.maximumHeight: 30
-                onNumberValueChanged: {
-                    configureDemoDisplayCrop(
-                        rowMenuValue.numberValue,
-                        columnMenuValue.numberValue,
-                        rowSpanMenuValue.numberValue,
-                        columnSpanMenuValue.numberValue
-                    );
-                    updateDemoDisplayLive();
-                }
-            }
-            IntMenuValue {
-                id: rowMenuValue
-                attrKey: "row"
-                propName: "Row"
-                min: 0
-                max: popup.rows - 1
-                visible: subWidgetsScroll.subIndex === 0
-                Layout.minimumHeight: 30
-                Layout.maximumHeight: 30
-                onNumberValueChanged: {
-                    configureDemoDisplayCrop(
-                        rowMenuValue.numberValue,
-                        columnMenuValue.numberValue,
-                        rowSpanMenuValue.numberValue,
-                        columnSpanMenuValue.numberValue
-                    );
-                    updateDemoDisplayLive();
-                }
-            }
-            IntMenuValue {
-                id: columnSpanMenuValue
-                attrKey: "columnSpan"
-                propName: "Column Span"
-                min: 1
-                max: popup.columns - columnMenuValue.numberValue
-                visible: subWidgetsScroll.subIndex === 0
-                Layout.minimumHeight: 30
-                Layout.maximumHeight: 30
-                onNumberValueChanged: {
-                    configureDemoDisplayCrop(
-                        rowMenuValue.numberValue,
-                        columnMenuValue.numberValue,
-                        rowSpanMenuValue.numberValue,
-                        columnSpanMenuValue.numberValue
-                    );
-                    updateDemoDisplayLive();
-                }
-            }
-            IntMenuValue {
-                id: rowSpanMenuValue
-                attrKey: "rowSpan"
-                propName: "Row Span"
-                min: 1
-                max: popup.rows - rowMenuValue.numberValue
-                visible: subWidgetsScroll.subIndex === 0
-                Layout.minimumHeight: 30
-                Layout.maximumHeight: 30
-                onNumberValueChanged: {
-                    configureDemoDisplayCrop(
-                        rowMenuValue.numberValue,
-                        columnMenuValue.numberValue,
-                        rowSpanMenuValue.numberValue,
-                        columnSpanMenuValue.numberValue
-                    );
-                    updateDemoDisplayLive();
-                }
-            }
-            Label {
-                text: "Sub Widgets:"
-                font.pointSize: 13
-                font.underline: true
-                verticalAlignment: Text.AlignVCenter
-                horizontalAlignment: Text.AlignHCenter
-                visible: subWidgetsScroll.subIndex === 0
-                Layout.fillWidth: true
-                Layout.topMargin: 5
-                Layout.bottomMargin: 5
-            }
             ScrollView {
-                id: subWidgetsScroll
-                readonly property string attrKey: "subWidgets"
-                property alias value: subWidgetsView.model
-                property int subIndex: 0
+                id: rightLayoutScroll
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 ScrollBar.vertical.policy: ScrollBar.AlwaysOn
-                visible: subWidgetsScroll.subIndex === 0
                 clip: true
-
                 ColumnLayout {
-                    width: subWidgetsScroll.availableWidth
-                    ListView {
-                        id: subWidgetsView
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: contentHeight
-                        spacing: 5
-                        clip: true
-                        model: []
-                        delegate: RowLayout {
-                            required property int index
-                            required property var model
-                            height: 30
-                            width: ListView.view.width
-                            Label {
-                                text: (parent.model.name && parent.model.name.length > 0 ? parent.model.name : parent.model.type) ?? ""
-                                color: Theme.labelWhite
-                                verticalAlignment: Text.AlignVCenter
-                                horizontalAlignment: Text.AlignHCenter
-                                Layout.fillHeight: true
-                                Layout.fillWidth: true
-                            }
-                            Button {
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: height
-                                text: Theme.icons.edit
-                                font.family: Theme.iconFontName
-                                font.weight: Theme.iconFontWeight
-                                font.pixelSize: Theme.iconFontSize
-                                contentItem: Text {
-                                    text: parent.text
-                                    font: parent.font
-                                    opacity: parent.enabled ? 1.0 : 0.3
-                                    color: parent.down ? Theme.buttonBlueActive : Theme.buttonBlue
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                background: Rectangle {
-                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
-                                    radius: Theme.buttonRadius
-                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
-                                    border.width: Theme.buttonBorderWidth
-                                }
-                                onClicked: popup.editSubWidget(index)
-                            }
-                            Button {
-                                Layout.fillHeight: true
-                                Layout.preferredWidth: height
-                                text: Theme.icons.trash
-                                font.family: Theme.iconFontName
-                                font.weight: Theme.iconFontWeight
-                                font.pixelSize: Theme.iconFontSize
-                                contentItem: Text {
-                                    text: parent.text
-                                    font: parent.font
-                                    opacity: parent.enabled ? 1.0 : 0.3
-                                    color: parent.down ? Theme.buttonRedActive : Theme.buttonRed
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                background: Rectangle {
-                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
-                                    radius: Theme.buttonRadius
-                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
-                                    border.width: Theme.buttonBorderWidth
-                                }
-                                onClicked: subWidgetsView.model.splice(index, 1);
-                            }
-                        }
-                        onModelChanged: Qt.callLater(popup.updateDemoDisplayLive);
+                    id: rightLayout
+                    width: rightLayoutScroll.availableWidth
+
+                    // Main Widget Configuration
+                    OptionMenuValue {
+                        id: typeMenuValue
+                        attrKey: "type"
+                        propName: "Type"
+                        options: popup.blockTypes
+                        visible: subWidgetsLayout.subIndex === 0
+                        Layout.minimumHeight: 30
+                        Layout.maximumHeight: 30
                     }
-                    RowLayout {
-                        id: subWidgetAdder
+                    IntMenuValue {
+                        id: columnMenuValue
+                        attrKey: "column"
+                        propName: "Column"
+                        min: 0
+                        max: popup.columns - 1
+                        visible: subWidgetsLayout.subIndex === 0
+                        Layout.minimumHeight: 30
+                        Layout.maximumHeight: 30
+                        onNumberValueChanged: {
+                            configureDemoDisplayCrop(
+                                rowMenuValue.numberValue,
+                                columnMenuValue.numberValue,
+                                rowSpanMenuValue.numberValue,
+                                columnSpanMenuValue.numberValue
+                            );
+                            updateDemoDisplayLive();
+                        }
+                    }
+                    IntMenuValue {
+                        id: rowMenuValue
+                        attrKey: "row"
+                        propName: "Row"
+                        min: 0
+                        max: popup.rows - 1
+                        visible: subWidgetsLayout.subIndex === 0
+                        Layout.minimumHeight: 30
+                        Layout.maximumHeight: 30
+                        onNumberValueChanged: {
+                            configureDemoDisplayCrop(
+                                rowMenuValue.numberValue,
+                                columnMenuValue.numberValue,
+                                rowSpanMenuValue.numberValue,
+                                columnSpanMenuValue.numberValue
+                            );
+                            updateDemoDisplayLive();
+                        }
+                    }
+                    IntMenuValue {
+                        id: columnSpanMenuValue
+                        attrKey: "columnSpan"
+                        propName: "Column Span"
+                        min: 1
+                        max: popup.columns - columnMenuValue.numberValue
+                        visible: subWidgetsLayout.subIndex === 0
+                        Layout.minimumHeight: 30
+                        Layout.maximumHeight: 30
+                        onNumberValueChanged: {
+                            configureDemoDisplayCrop(
+                                rowMenuValue.numberValue,
+                                columnMenuValue.numberValue,
+                                rowSpanMenuValue.numberValue,
+                                columnSpanMenuValue.numberValue
+                            );
+                            updateDemoDisplayLive();
+                        }
+                    }
+                    IntMenuValue {
+                        id: rowSpanMenuValue
+                        attrKey: "rowSpan"
+                        propName: "Row Span"
+                        min: 1
+                        max: popup.rows - rowMenuValue.numberValue
+                        visible: subWidgetsLayout.subIndex === 0
+                        Layout.minimumHeight: 30
+                        Layout.maximumHeight: 30
+                        onNumberValueChanged: {
+                            configureDemoDisplayCrop(
+                                rowMenuValue.numberValue,
+                                columnMenuValue.numberValue,
+                                rowSpanMenuValue.numberValue,
+                                columnSpanMenuValue.numberValue
+                            );
+                            updateDemoDisplayLive();
+                        }
+                    }
+                    Label {
+                        text: "Actions:"
+                        font.pointSize: 13
+                        font.underline: true
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
                         Layout.fillWidth: true
-                        ComboBox {
-                            id: subWidgetComboBox
+                        Layout.topMargin: 5
+                        Layout.bottomMargin: 5
+                    }
+                    ColumnLayout {
+                        id: actionsLayout
+                        readonly property string attrKey: "actions"
+                        property alias value: actionsView.model
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        ListView {
+                            id: actionsView
                             Layout.fillWidth: true
-                            model: popup.subWidgetTypes
-                            background: Rectangle {
-                                color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
-                                radius: Theme.buttonRadius
-                                border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
-                                border.width: Theme.buttonBorderWidth
+                            Layout.preferredHeight: contentHeight
+                            spacing: 5
+                            clip: true
+                            model: []
+                            delegate: RowLayout {
+                                required property int index
+                                required property var model
+                                height: 30
+                                width: ListView.view.width
+                                Label {
+                                    text: Connection.actionEventTypeString(parent.model.type).replace(/([a-z])([A-Z])/g, "$1 $2")
+                                    color: Theme.labelWhite
+                                    verticalAlignment: Text.AlignVCenter
+                                    horizontalAlignment: Text.AlignHCenter
+                                    Layout.fillHeight: true
+                                    Layout.fillWidth: true
+                                }
+                                Button {
+                                    Layout.fillHeight: true
+                                    Layout.preferredWidth: height
+                                    text: Theme.icons.edit
+                                    font.family: Theme.iconFontName
+                                    font.weight: Theme.iconFontWeight
+                                    font.pixelSize: Theme.iconFontSize
+                                    contentItem: Text {
+                                        text: parent.text
+                                        font: parent.font
+                                        opacity: parent.enabled ? 1.0 : 0.3
+                                        color: parent.down ? Theme.buttonBlueActive : Theme.buttonBlue
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                        radius: Theme.buttonRadius
+                                        border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                        border.width: Theme.buttonBorderWidth
+                                    }
+                                    onClicked: {
+                                        popup.actionsEditor.value = model.value;
+                                        popup.actionsEditor.open();
+                                        popup.actionsEditor.closed.connect(onActionsEditorClosed);
+                                    }
+                                    function onActionsEditorClosed() {
+                                        model.value = popup.actionsEditor.value;
+                                        popup.actionsEditor.closed.disconnect(onActionsEditorClosed);
+                                    }
+                                }
+                                Button {
+                                    Layout.fillHeight: true
+                                    Layout.preferredWidth: height
+                                    text: Theme.icons.trash
+                                    font.family: Theme.iconFontName
+                                    font.weight: Theme.iconFontWeight
+                                    font.pixelSize: Theme.iconFontSize
+                                    contentItem: Text {
+                                        text: parent.text
+                                        font: parent.font
+                                        opacity: parent.enabled ? 1.0 : 0.3
+                                        color: parent.down ? Theme.buttonRedActive : Theme.buttonRed
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                        radius: Theme.buttonRadius
+                                        border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                        border.width: Theme.buttonBorderWidth
+                                    }
+                                    onClicked: actionsView.model.splice(index, 1);
+                                }
                             }
-                            Component.onCompleted: currentIndex = -1
                         }
-                        Button {
-                            Layout.preferredWidth: 30
-                            Layout.preferredHeight: 30
-                            Layout.alignment: Qt.AlignCenter
-                            text: Theme.icons.add
-                            font.family: Theme.iconFontName
-                            font.weight: Theme.iconFontWeight
-                            font.pixelSize: Theme.iconFontSize
-                            enabled: subWidgetComboBox.currentIndex !== -1
-                            background: Rectangle {
-                                color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
-                                radius: Theme.buttonRadius
-                                border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
-                                border.width: Theme.buttonBorderWidth
+                        RowLayout {
+                            id: actionAdder
+                            Layout.fillWidth: true
+                            ComboBox {
+                                id: actionComboBox
+                                Layout.fillWidth: true
+                                textRole: "text"
+                                valueRole: "value"
+                                model: {
+                                    let actions = [];
+                                    for (let i = 0; true; i++) {
+                                        const action = Connection.actionEventTypeString(i);
+                                        if (!action) break;
+                                        actions.push({ "text": action.replace(/([a-z])([A-Z])/g, "$1 $2"), "value": i });
+                                    }
+                                    return actions;
+                                }
+                                background: Rectangle {
+                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                    radius: Theme.buttonRadius
+                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                    border.width: Theme.buttonBorderWidth
+                                }
+                                Component.onCompleted: currentIndex = -1
                             }
-                            onClicked: {
-                                const subWidget = { type: subWidgetComboBox.currentText };
-                                if (subWidgetComboBox.currentText === "Image")
-                                    subWidget.style = { 0: [{ attrKey: Connection.Width, name: "Size", text: "100p%", value: 100 }]}
-                                subWidgetsView.model.push(subWidget);
-                                popup.updateDemoDisplayLive();
-                                popup.scrollSubWidgetsToBottom();
+                            Button {
+                                Layout.preferredWidth: 30
+                                Layout.preferredHeight: 30
+                                Layout.alignment: Qt.AlignCenter
+                                text: Theme.icons.add
+                                font.family: Theme.iconFontName
+                                font.weight: Theme.iconFontWeight
+                                font.pixelSize: Theme.iconFontSize
+                                enabled: actionComboBox.currentIndex !== -1
+                                background: Rectangle {
+                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                    radius: Theme.buttonRadius
+                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                    border.width: Theme.buttonBorderWidth
+                                }
+                                onClicked: {
+                                    if (!actionsLayout.value) actionsLayout.value = [];
+                                    actionsLayout.value.push({ type: actionComboBox.currentValue, value: [] });
+                                    popup.scrollActionsToBottom();
+                                }
                             }
                         }
                     }
-                }
-            }
-            // Sub Widget Configuration
-            StringMenuValue {
-                id: subNameMenuValue
-                attrKey: "name"
-                propName: "Name"
-                visible: subWidgetsScroll.subIndex !== 0
-                Layout.minimumHeight: 30
-                Layout.maximumHeight: 30
-            }
-            Loader {
-                id: subWidgetValueLoader
-                property var data: {
-                    if (!active) return;
-                    let data = {};
-                    for (let menuValue of subWidgetValueLoader.item.children) {
-                        if (menuValue.attrKey === undefined || !menuValue.visible) continue;
-                        if (menuValue instanceof IntMenuValue) {
-                            data[menuValue.attrKey] = menuValue.numberValue;
-                        } else {
-                            data[menuValue.attrKey] = menuValue.value;
+                    Label {
+                        text: "Sub Widgets:"
+                        font.pointSize: 13
+                        font.underline: true
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                        visible: subWidgetsLayout.subIndex === 0
+                        Layout.fillWidth: true
+                        Layout.topMargin: 5
+                        Layout.bottomMargin: 5
+                    }
+                    ColumnLayout {
+                        id: subWidgetsLayout
+                        readonly property string attrKey: "subWidgets"
+                        property alias value: subWidgetsView.model
+                        property int subIndex: 0
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        visible: subWidgetsLayout.subIndex === 0
+                        ListView {
+                            id: subWidgetsView
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: contentHeight
+                            spacing: 5
+                            clip: true
+                            model: []
+                            delegate: RowLayout {
+                                required property int index
+                                required property var model
+                                height: 30
+                                width: ListView.view.width
+                                Label {
+                                    text: (parent.model.name && parent.model.name.length > 0 ? parent.model.name : parent.model.type) ?? ""
+                                    color: Theme.labelWhite
+                                    verticalAlignment: Text.AlignVCenter
+                                    horizontalAlignment: Text.AlignHCenter
+                                    Layout.fillHeight: true
+                                    Layout.fillWidth: true
+                                }
+                                Button {
+                                    Layout.fillHeight: true
+                                    Layout.preferredWidth: height
+                                    text: Theme.icons.edit
+                                    font.family: Theme.iconFontName
+                                    font.weight: Theme.iconFontWeight
+                                    font.pixelSize: Theme.iconFontSize
+                                    contentItem: Text {
+                                        text: parent.text
+                                        font: parent.font
+                                        opacity: parent.enabled ? 1.0 : 0.3
+                                        color: parent.down ? Theme.buttonBlueActive : Theme.buttonBlue
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                        radius: Theme.buttonRadius
+                                        border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                        border.width: Theme.buttonBorderWidth
+                                    }
+                                    onClicked: popup.editSubWidget(index)
+                                }
+                                Button {
+                                    Layout.fillHeight: true
+                                    Layout.preferredWidth: height
+                                    text: Theme.icons.trash
+                                    font.family: Theme.iconFontName
+                                    font.weight: Theme.iconFontWeight
+                                    font.pixelSize: Theme.iconFontSize
+                                    contentItem: Text {
+                                        text: parent.text
+                                        font: parent.font
+                                        opacity: parent.enabled ? 1.0 : 0.3
+                                        color: parent.down ? Theme.buttonRedActive : Theme.buttonRed
+                                        horizontalAlignment: Text.AlignHCenter
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                    background: Rectangle {
+                                        color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                        radius: Theme.buttonRadius
+                                        border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                        border.width: Theme.buttonBorderWidth
+                                    }
+                                    onClicked: subWidgetsView.model.splice(index, 1);
+                                }
+                            }
+                            onModelChanged: Qt.callLater(popup.updateDemoDisplayLive);
+                        }
+                        RowLayout {
+                            id: subWidgetAdder
+                            Layout.fillWidth: true
+                            ComboBox {
+                                id: subWidgetComboBox
+                                Layout.fillWidth: true
+                                model: popup.subWidgetTypes
+                                background: Rectangle {
+                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                    radius: Theme.buttonRadius
+                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                    border.width: Theme.buttonBorderWidth
+                                }
+                                Component.onCompleted: currentIndex = -1
+                            }
+                            Button {
+                                Layout.preferredWidth: 30
+                                Layout.preferredHeight: 30
+                                Layout.alignment: Qt.AlignCenter
+                                text: Theme.icons.add
+                                font.family: Theme.iconFontName
+                                font.weight: Theme.iconFontWeight
+                                font.pixelSize: Theme.iconFontSize
+                                enabled: subWidgetComboBox.currentIndex !== -1
+                                background: Rectangle {
+                                    color: Qt.darker(Theme.mainBackground, parent.down ? Theme.buttonBackgroundDarker : parent.hovered ? 1 / Theme.buttonBackgroundDarker : 1)
+                                    radius: Theme.buttonRadius
+                                    border.color: Qt.darker(Theme.border, parent.down ? Theme.buttonBorderDarker : parent.hovered ? 1 / Theme.buttonBorderDarker : 1)
+                                    border.width: Theme.buttonBorderWidth
+                                }
+                                onClicked: {
+                                    const subWidget = {type: subWidgetComboBox.currentText};
+                                    if (subWidgetComboBox.currentText === "Image")
+                                        subWidget.style = {
+                                            0: [{
+                                                attrKey: Connection.Width,
+                                                name: "Size",
+                                                text: "100p%",
+                                                value: 100
+                                            }]
+                                        }
+                                    subWidgetsView.model.push(subWidget);
+                                    popup.updateDemoDisplayLive();
+                                    popup.scrollSubWidgetsToBottom();
+                                }
+                            }
                         }
                     }
-                    return data;
-                }
-                active: subWidgetsScroll.subIndex !== 0
-                Layout.fillWidth: true
-                Layout.maximumHeight: active ? Number.POSITIVE_INFINITY : 0
-                onDataChanged: {
-                    Qt.callLater(popup.updateDemoDisplayLive)
+                    // Sub Widget Configuration
+                    StringMenuValue {
+                        id: subNameMenuValue
+                        attrKey: "name"
+                        propName: "Name"
+                        visible: subWidgetsLayout.subIndex !== 0
+                        Layout.minimumHeight: 30
+                        Layout.maximumHeight: 30
+                    }
+                    Loader {
+                        id: subWidgetValueLoader
+                        property var data: {
+                            if (!active) return;
+                            let data = {};
+                            for (let menuValue of subWidgetValueLoader.item.children) {
+                                if (menuValue.attrKey === undefined || !menuValue.visible) continue;
+                                if (menuValue instanceof IntMenuValue) {
+                                    data[menuValue.attrKey] = menuValue.numberValue;
+                                } else {
+                                    data[menuValue.attrKey] = menuValue.value;
+                                }
+                            }
+                            return data;
+                        }
+                        active: subWidgetsLayout.subIndex !== 0
+                        Layout.fillWidth: true
+                        Layout.maximumHeight: active ? Number.POSITIVE_INFINITY : 0
+                        onDataChanged: {
+                            Qt.callLater(popup.updateDemoDisplayLive)
+                        }
+                    }
                 }
             }
             Item {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
                 Layout.minimumWidth: removeButton.implicitWidth + 10 + saveButton.implicitWidth + 10 + backButton.implicitWidth
                 Layout.minimumHeight: Math.max(removeButton.implicitHeight, Math.max(saveButton.implicitHeight, backButton.implicitHeight))
                 Button {
@@ -372,7 +513,7 @@ Popup {
                     font.weight: Theme.iconFontWeight
                     font.pixelSize: Theme.iconFontSize
                     anchors.bottom: parent.bottom
-                    visible: subWidgetsScroll.subIndex !== 0
+                    visible: subWidgetsLayout.subIndex !== 0
                     anchors.right: removeButton.left
                     anchors.rightMargin: 10
                     contentItem: Text {
@@ -400,7 +541,7 @@ Popup {
                     font.family: Theme.iconFontName
                     font.weight: Theme.iconFontWeight
                     font.pixelSize: Theme.iconFontSize
-                    enabled: !popup.newBlock && subWidgetsScroll.subIndex === 0
+                    enabled: !popup.newBlock && subWidgetsLayout.subIndex === 0
                     anchors.bottom: parent.bottom
                     anchors.right: saveButton.left
                     anchors.rightMargin: 10
@@ -429,7 +570,7 @@ Popup {
                     font.family: Theme.iconFontName
                     font.weight: Theme.iconFontWeight
                     font.pixelSize: Theme.iconFontSize
-                    enabled: subWidgetsScroll.subIndex === 0
+                    enabled: subWidgetsLayout.subIndex === 0
                     anchors.bottom: parent.bottom
                     anchors.right: parent.right
                     contentItem: Text {
@@ -522,8 +663,8 @@ Popup {
         for (const styleSelector in blockStyleData) {
             demoControlGrid.setStyle(index, 0, styleSelector, blockStyleData[styleSelector]);
         }
-        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
-            const subWidget = subWidgetsScroll.value[i];
+        for (let i = 0; i < subWidgetsLayout.value.length; i++) {
+            const subWidget = subWidgetsLayout.value[i];
             if (subWidget.type === "Image" && (!("image" in subWidget) || !("imageKey" in subWidget.image)
                 || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
             const subIndex = demoControlGrid.subWidget(subWidget.type, index, 0, subWidget);
@@ -554,13 +695,13 @@ Popup {
                     images.add(styleElement.value.imageKey);
             }
         }
-        for (let i = 1; i <= subWidgetsScroll.value.length; i++) {
-            const subWidget = subWidgetsScroll.subIndex === i ?
-                    Object.assign({}, subWidgetsScroll.value[i-1], subWidgetValueLoader.data) :
-                    subWidgetsScroll.value[i-1];
+        for (let i = 1; i <= subWidgetsLayout.value.length; i++) {
+            const subWidget = subWidgetsLayout.subIndex === i ?
+                Object.assign({}, subWidgetsLayout.value[i-1], subWidgetValueLoader.data) :
+                subWidgetsLayout.value[i-1];
             if (subWidget.type === "Image" && subWidget.image && subWidget.image.imageKey)
                 images.add(subWidget.image.imageKey);
-            const subWidgetStyleData = subWidgetsScroll.subIndex === i ? styleDataView.styleData : subWidget.style;
+            const subWidgetStyleData = subWidgetsLayout.subIndex === i ? styleDataView.styleData : subWidget.style;
             for (const styleSelector in subWidgetStyleData) {
                 for (const styleElement of subWidgetStyleData[styleSelector]) {
                     if (styleElement.attrKey === Connection.BackgroundImageIndex
@@ -573,8 +714,8 @@ Popup {
     }
     function updateSubWidgetMacros(): void {
         const index = columnMenuValue.numberValue + (rowMenuValue.numberValue * columns);
-        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
-            const subWidget = subWidgetsScroll.value[i];
+        for (let i = 0; i < subWidgetsLayout.value.length; i++) {
+            const subWidget = subWidgetsLayout.value[i];
             let subSizePosData = { index: index, subIndex: i+1 };
             demoControlGrid.insertCoordsData(subSizePosData);
             const subMacros = {};
@@ -598,10 +739,10 @@ Popup {
         const fromIndex = columnMenuValue.numberValue + (rowMenuValue.numberValue * columns);
         const toIndex = fromIndex + ((rowSpanMenuValue.numberValue-1) * columns) + (columnSpanMenuValue.numberValue-1);
         demoControlGrid.addWidget(typeMenuValue.value, fromIndex, toIndex);
-        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
-            const subWidget = subWidgetsScroll.subIndex === i + 1 ?
-                Object.assign({}, subWidgetsScroll.value[i], subWidgetValueLoader.data) :
-                subWidgetsScroll.value[i];
+        for (let i = 0; i < subWidgetsLayout.value.length; i++) {
+            const subWidget = subWidgetsLayout.subIndex === i + 1 ?
+                Object.assign({}, subWidgetsLayout.value[i], subWidgetValueLoader.data) :
+                subWidgetsLayout.value[i];
             if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
             const subIndex = demoControlGrid.subWidget(subWidget.type, fromIndex, 0, subWidget);
             if (subIndex !== i + 1) {
@@ -612,20 +753,20 @@ Popup {
 
         buildMacros();
         styleDataView.revalidateStyleValue();
-        if (subWidgetsScroll.subIndex === 0)
+        if (subWidgetsLayout.subIndex === 0)
             updateSubWidgetMacros();
         updateImagesLive();
 
         for (const styleSelector in blockStyleData) {
             demoControlGrid.setStyle(fromIndex, 0, styleSelector, blockStyleData[styleSelector]);
         }
-        for (let i = 0; i < subWidgetsScroll.value.length; i++) {
+        for (let i = 0; i < subWidgetsLayout.value.length; i++) {
             const subIndex = i + 1;
-            const subWidget = subWidgetsScroll.subIndex === subIndex ?
-                Object.assign({}, subWidgetsScroll.value[i], subWidgetValueLoader.data) :
-                subWidgetsScroll.value[i];
+            const subWidget = subWidgetsLayout.subIndex === subIndex ?
+                Object.assign({}, subWidgetsLayout.value[i], subWidgetValueLoader.data) :
+                subWidgetsLayout.value[i];
             if (subWidget.type === "Image" && (!subWidget.image || !subWidget.image.imageKey || subWidget.image.imageKey.length <= 1)) continue;
-            const subWidgetStyleData = subWidgetsScroll.subIndex === subIndex ? styleDataView.styleData : subWidget.style;
+            const subWidgetStyleData = subWidgetsLayout.subIndex === subIndex ? styleDataView.styleData : subWidget.style;
             for (const styleSelector in subWidgetStyleData) {
                 demoControlGrid.setStyle(fromIndex, subIndex, styleSelector, subWidgetStyleData[styleSelector]);
             }
@@ -640,7 +781,7 @@ Popup {
                 if (menuValue.attrKey === undefined || !menuValue.visible) continue;
                 menuValue.value = data[menuValue.attrKey];
             }
-            if (!subWidgetsScroll.value) subWidgetsScroll.value = [];
+            if (!subWidgetsLayout.value) subWidgetsLayout.value = [];
         } else {
             index = column + (row * columns);
             blockStyleData = {};
@@ -649,13 +790,13 @@ Popup {
             columnSpanMenuValue.value = 1;
             rowMenuValue.value = row;
             columnMenuValue.value = column;
-            subWidgetsScroll.value = [];
+            subWidgetsLayout.value = [];
         }
     }
     function saveBlock(): void {
         styleDataView.updateStyleData();
-        if (subWidgetsScroll.subIndex !== 0)
-            subWidgetsView.model[subWidgetsScroll.subIndex-1].style = styleDataView.styleData;
+        if (subWidgetsLayout.subIndex !== 0)
+            subWidgetsView.model[subWidgetsLayout.subIndex-1].style = styleDataView.styleData;
         let data = {
             style: blockStyleData,
         };
@@ -700,7 +841,7 @@ Popup {
     function buildMacros(): void {
         const index = columnMenuValue.numberValue + (rowMenuValue.numberValue * columns);
         const mainMacros = {};
-        const sizePosData = { index: index, subIndex: subWidgetsScroll.subIndex };
+        const sizePosData = { index: index, subIndex: subWidgetsLayout.subIndex };
         demoControlGrid.insertCoordsData(sizePosData);
         Utils.buildMacros(
             mainMacros,
@@ -712,7 +853,7 @@ Popup {
             rowSpanMenuValue.numberValue,
             columnSpanMenuValue.numberValue
         );
-        if (subWidgetsScroll.subIndex !== 0) {
+        if (subWidgetsLayout.subIndex !== 0) {
             const parentMacros = {};
             const parentSizePosData = { index: index };
             demoControlGrid.insertCoordsData(parentSizePosData);
@@ -731,22 +872,27 @@ Popup {
         styleDataView.macros = mainMacros;
     }
 
+    // Actions Layout
+    function scrollActionsToBottom(): void {
+        rightLayoutScroll.contentItem.contentY = Math.max(0, actionsLayout.y + actionsLayout.height - rightLayoutScroll.height + 40);
+    }
+
     // Sub Widgets Layout
     function scrollSubWidgetsToBottom(): void {
-        subWidgetsScroll.contentItem.contentY = subWidgetsScroll.contentItem.contentHeight - subWidgetsScroll.contentItem.height + 100;
+        rightLayoutScroll.contentItem.contentY = Math.max(0, subWidgetsLayout.y + subWidgetsLayout.height - rightLayoutScroll.height + 40);
     }
     function editSubWidget(index: int): void {
-        if (subWidgetsScroll.subIndex !== 0)
+        if (subWidgetsLayout.subIndex !== 0)
             returnToMainWidget();
         styleDataView.updateStyleData();
-        if (subWidgetsScroll.subIndex !== 0)
-            subWidgetsView.model[subWidgetsScroll.subIndex-1].style = styleDataView.styleData;
+        if (subWidgetsLayout.subIndex !== 0)
+            subWidgetsView.model[subWidgetsLayout.subIndex-1].style = styleDataView.styleData;
         if (!subWidgetsView.model[index].style)
             subWidgetsView.model[index].style = {};
         subWidgetValueLoader.setSource("subWidgetValues/Sub" + subWidgetsView.model[index].type + "Value.qml",
                 subWidgetsView.model[index].type === "Image" ?
                     { imagesMenu: popup.imagesMenu, macros: Qt.binding(() => styleDataView.macros) } : {});
-        subWidgetsScroll.subIndex = index + 1;
+        subWidgetsLayout.subIndex = index + 1;
         subNameMenuValue.value = subWidgetsView.model[index].name ?? "";
         for (let menuValue of subWidgetValueLoader.item.children) {
             if (menuValue.attrKey === undefined || !menuValue.visible) continue;
@@ -761,8 +907,8 @@ Popup {
     }
 
     function returnToMainWidget(): void {
-        if (subWidgetsScroll.subIndex === 0) return;
-        const index = subWidgetsScroll.subIndex - 1;
+        if (subWidgetsLayout.subIndex === 0) return;
+        const index = subWidgetsLayout.subIndex - 1;
         if (subNameMenuValue.value.length === 0)
             delete subWidgetsView.model[index].name;
         else
@@ -778,6 +924,6 @@ Popup {
         styleDataView.updateStyleData();
         subWidgetsView.model[index].style = styleDataView.styleData;
         styleDataView.styleData = Qt.binding(() => blockStyleData);
-        subWidgetsScroll.subIndex = 0;
+        subWidgetsLayout.subIndex = 0;
     }
 }

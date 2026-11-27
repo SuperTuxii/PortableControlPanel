@@ -49,6 +49,7 @@ public slots:
     void setStyle(uint8_t index, uint8_t subIndex, const QVariant& data);
     void removeStyle(uint8_t index, uint8_t subIndex, uint32_t styleSelector);
     void removeStyles(uint8_t index, uint8_t subIndex);
+    void addEventActions(uint8_t index);
 
     void serialReadReady();
     void serialErrorOccurred(QSerialPort::SerialPortError error);

@@ -70,6 +70,8 @@ Item {
         readonly property string refresh: "\ue923"
         readonly property string selectCheck: "\uf1fe"
         readonly property string fullscreen: "\ue5d0"
+        readonly property string arrowUp: "\ue5c7"
+        readonly property string arrowDown: "\ue5c5"
     }
     property QtObject toast: QtObject {
         property color accentInfo: "#3498DB"

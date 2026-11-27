@@ -19,6 +19,7 @@
     RemoveWidgetCMD,\
     RemoveImageCMD,\
     ResetStylesCMD,\
+    AddEventActionCMD,\
     /* No Operands & Data */\
     SetOuterPadCMD = 0x80,\
     SetRowPadCMD,\
@@ -39,7 +40,17 @@
     /* No Operands & No Data */\
     /*X = 0x00,*/\
     /* Operands & No Data*/\
-    /*Y = 0x40,*/\
+    PressedEventACT = 0x40,\
+    PressLostEventACT,\
+    ShortClickedEventACT,\
+    SingleClickedEventACT,\
+    DoubleClickedEventACT,\
+    TripleClickedEventACT,\
+    LongPressedEventACT,\
+    LongPressedRepeatEventACT,\
+    ClickedEventACT,\
+    ReleasedEventACT,\
+    GestureEventACT,\
     /* No Operands & Data */\
     ProtocolInfoACT = 0x80,\
     CmdConfirmationACT,\
@@ -253,6 +264,21 @@
     ColorFormatARGB32               = LV_COLOR_FORMAT_ARGB8888,\
     ColorFormatRGB32                = LV_COLOR_FORMAT_XRGB8888,\
     ColorFormatARGB32_Premultiplied = LV_COLOR_FORMAT_ARGB8888_PREMULTIPLIED,\
+};
+
+#define PROTOCOL_ACTION_EVENT_TYPE enum EventTypes {\
+    AllEvents,\
+    PressedEvent,\
+    PressLostEvent,\
+    ShortClickedEvent,\
+    SingleClickedEvent,\
+    DoubleClickedEvent,\
+    TripleClickedEvent,\
+    LongPressedEvent,\
+    LongPressedRepeatEvent,\
+    ClickedEvent,\
+    ReleasedEvent,\
+    GestureEvent,\
 };
 
 #endif //CONTROLPANELSOFTWARE_PROTOCOL_MACROS_H
